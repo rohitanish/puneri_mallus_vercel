@@ -4,7 +4,8 @@ import {
   Calendar, Camera, Instagram, Users, 
   ArrowRight, Settings, LayoutPanelTop, 
   Zap, ShieldCheck, Globe, Handshake, Search, X,
-  MessageSquare // Added Import
+  MessageSquare, // Existing
+  Megaphone // Added for Collaborations
 } from 'lucide-react';
 import Link from 'next/link';
 import AddAdminCard from '@/components/admin/AddAdminCard';
@@ -20,6 +21,15 @@ export default function AdminPortal() {
       link: "/admin/slider",
       status: "Live",
       color: "from-brandRed/20"
+    },
+    // --- NEW COLLABORATIONS MODULE ---
+    {
+      title: "Business Collabs",
+      desc: "Deploy and manage partner ads, floating banners, and business popups.",
+      icon: <Megaphone className="text-brandRed" size={32} />,
+      link: "/admin/collabs", // This matches our new route
+      status: "Live",
+      color: "from-brandRed/30"
     },
     {
       title: "Tribe Allies",
@@ -69,7 +79,6 @@ export default function AdminPortal() {
       status: "Internal",
       color: "from-blue-500/10"
     },
-    // --- NEW SUPPORT MODULE ---
     {
       title: "Support Hub",
       desc: "Monitor and respond to community transmissions and support tickets.",
@@ -80,6 +89,7 @@ export default function AdminPortal() {
     }
   ];
 
+  // Rest of your logic (filteredModules, return statement) remains the same
   const filteredModules = useMemo(() => {
     return adminModules.filter(module => 
       module.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -89,12 +99,13 @@ export default function AdminPortal() {
 
   return (
     <div className="min-h-screen bg-black text-white pt-40 pb-20 px-6 selection:bg-brandRed/30">
-      {/* Background and Header logic remains exactly as provided */}
+      {/* Background and Header logic */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-brandRed/5 blur-[150px] opacity-50" />
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
+        {/* Hero Section */}
         <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
           <div className="space-y-6">
             <div className="inline-flex items-center gap-3 px-5 py-2 bg-zinc-900 border border-white/5 rounded-full">
@@ -120,10 +131,12 @@ export default function AdminPortal() {
           </div>
         </div>
 
+        {/* Admin Management Card */}
         <div className="max-w-md mb-20">
             <AddAdminCard />
         </div>
 
+        {/* Section Header & Search */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
           <div className="flex items-center gap-4 flex-1">
             <h2 className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.4em] whitespace-nowrap">Operational Modules</h2>
@@ -147,6 +160,7 @@ export default function AdminPortal() {
           </div>
         </div>
 
+        {/* Grid of Modules */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredModules.length > 0 ? (
             filteredModules.map((module, idx) => (

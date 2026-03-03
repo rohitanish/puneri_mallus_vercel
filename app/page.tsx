@@ -7,6 +7,7 @@ import {
   MapPin, Zap, Loader2 
 } from 'lucide-react';
 import EventCard from '@/components/EventCard';
+import DynamicTribeAd from '@/components/Popup';
 
 const LaserDivider = () => (
   <div className="relative w-full h-px flex items-center justify-center overflow-hidden my-4">
@@ -408,7 +409,7 @@ setPast(format(pastFeatured).slice(0, 3));      // Shows up to 3
             </div>
           </div>
         </section>
-
+              <DynamicTribeAd />
         <LaserDivider />
       </div>
     </div>

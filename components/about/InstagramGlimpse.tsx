@@ -52,7 +52,7 @@ export default function InstagramGlimpse() {
           </h2>
         </div>
         <a 
-          href="https://instagram.com/punerimallus" 
+          href="https://www.instagram.com/puneri_mallus?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" 
           target="_blank" 
           rel="noopener noreferrer"
           className="group flex items-center gap-3 bg-zinc-950 border border-white/10 px-8 py-4 rounded-2xl hover:border-brandRed transition-all duration-500"

@@ -72,9 +72,9 @@ export default function Footer() {
             <span className="text-[11px] font-semibold uppercase tracking-[0.35em] text-zinc-600">
               © 2026 Puneri Mallus Hub
             </span>
-            <span className="text-[10px] uppercase tracking-[0.3em] text-zinc-700">
-              Built by Rohit Anish
-            </span>
+            <span className="text-[12px] uppercase tracking-[0.3em] text-white">
+  Built by Rohit Anish
+</span>
           </div>
 
           <div className="flex items-center gap-8">
