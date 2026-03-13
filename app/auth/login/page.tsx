@@ -4,14 +4,16 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff, RefreshCw } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState('');
+  const [showResend, setShowResend] = useState(false);
   
   const router = useRouter();
 
@@ -24,11 +26,19 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setShowResend(false);
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     
     if (error) {
-      setError(error.message);
+      if (error.message.toLowerCase().includes("email not confirmed")) {
+        setError("ACCOUNT NOT ACTIVE: PLEASE CHECK YOUR EMAIL TO VERIFY.");
+        setShowResend(true); // Show the resend button
+      } else if (error.message.toLowerCase().includes("invalid login credentials")) {
+        setError("INVALID EMAIL OR PASSWORD.");
+      } else {
+        setError(error.message.toUpperCase());
+      }
       setLoading(false);
     } else {
       router.push('/');
@@ -36,35 +46,41 @@ export default function LoginPage() {
     }
   };
 
+  const handleResendEmail = async () => {
+    setResending(true);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+    });
+
+    if (error) {
+      setError("FAILED TO RESEND. PLEASE TRY AGAIN LATER.");
+    } else {
+      setError("ACTIVATION LINK RESENT! CHECK YOUR INBOX.");
+      setShowResend(false);
+    }
+    setResending(false);
+  };
+
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
       
       {/* BACKGROUND IMAGE */}
       <div className="absolute inset-0 z-0">
-  <Image 
-    src="/events/login.jpg" 
-    alt="Background"
-    fill
-    
-    className="object-cover object-right opacity-60 transition-all duration-700" 
-    priority
-  />
-  
-  {/* COLOR ENHANCEMENT OVERLAYS */}
-  {/* Desktop: A deeper gradient that preserves the colorful right side */}
-  <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent hidden lg:block" />
-  
-  {/* Mobile: A slight tint to keep text readable without killing the color */}
-  <div className="absolute inset-0 bg-black/50 lg:hidden" />
+        <Image 
+          src="/events/login.jpg" 
+          alt="Background"
+          fill
+          className="object-cover object-right opacity-60 transition-all duration-700" 
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent hidden lg:block" />
+        <div className="absolute inset-0 bg-black/50 lg:hidden" />
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-brandRed/5 blur-[120px] pointer-events-none" />
+      </div>
 
-  {/* VIBRANCY BOOST: Optional subtle red/purple glow to match the 'Tribe' vibe */}
-  <div className="absolute top-0 right-0 w-1/2 h-full bg-brandRed/5 blur-[120px] pointer-events-none" />
-</div>
-
-      {/* COMPACT LOGIN CARD */}
       <div className="w-full max-w-[420px] relative z-10">
-        <div className="relative bg-white/[0.03] backdrop-blur-2xl border border-white/10 px-8 py-10 md:px-10 md:py-12 rounded-[45px] shadow-2xl overflow-hidden">
-          
+        <div className="relative bg-white/[0.03] backdrop-blur-2xl border border-white/10 px-8 py-10 md:px-10 md:py-12 rounded-[45px] shadow-2xl overflow-hidden text-left">
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none" />
 
           {/* IMPACTFUL LOGO */}
@@ -93,8 +109,8 @@ export default function LoginPage() {
                   type="email" 
                   placeholder="EMAIL" 
                   required
-                 
-                  suppressHydrationWarning // Add this line
+                  autoComplete="off"
+                  suppressHydrationWarning
                   className="w-full bg-black/40 border border-white/10 p-3.5 pl-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white placeholder:text-white/10"
                   value={email} 
                   onChange={(e) => setEmail(e.target.value)}
@@ -130,7 +146,23 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <p className="text-brandRed text-[9px] font-black uppercase tracking-widest text-center py-1">{error}</p>
+                <div className="space-y-3">
+                  <p className="text-brandRed text-[9px] font-black uppercase tracking-widest text-center py-2 px-4 bg-brandRed/10 border border-brandRed/20 rounded-lg animate-pulse">
+                    {error}
+                  </p>
+                  
+                  {showResend && (
+                    <button
+                      type="button"
+                      onClick={handleResendEmail}
+                      disabled={resending}
+                      className="w-full flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-white/50 hover:text-white transition-colors"
+                    >
+                      <RefreshCw size={12} className={resending ? "animate-spin" : ""} />
+                      {resending ? "RESENDING..." : "Resend Activation Email"}
+                    </button>
+                  )}
+                </div>
               )}
 
               <button 

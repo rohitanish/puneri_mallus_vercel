@@ -6,12 +6,17 @@ import Link from 'next/link';
 import { 
   Mail, Lock, User, ArrowRight, Eye, EyeOff, 
   Phone, Smartphone, RefreshCcw, Briefcase, 
-  MapPin, Calendar as CalendarIcon 
+  MapPin, Calendar as CalendarIcon, CheckCircle2 
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// --- DUAL TESTING TOGGLES ---
+const DEV_MODE_PHONE = true; // Set to false for real SMS OTP
+const DEV_MODE_EMAIL = true; // Set to false to force Email Activation link
+// ----------------------------
 
 export default function SignupPage() {
-  const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -21,16 +26,14 @@ export default function SignupPage() {
   const [location, setLocation] = useState('');
   const [dob, setDob] = useState('');
   const [otp, setOtp] = useState('');
+  const [showOtpField, setShowOtpField] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(DEV_MODE_PHONE); 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const router = useRouter();
   const [timer, setTimer] = useState(0);
+  const router = useRouter();
   const dateInputRef = useRef<HTMLInputElement>(null);
-
-  // Validation Logic
-  const isPhoneValid = useMemo(() => phone.length === 10, [phone]);
-  const showPhoneError = useMemo(() => phone.length > 0 && phone.length < 10, [phone]);
 
   const PUNE_AREAS = [
     "Pune", "Shivajinagar", "Kothrud", "Karve Nagar", "Erandwane", "Deccan", 
@@ -51,6 +54,9 @@ export default function SignupPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
+  const isPhoneValid = useMemo(() => phone.length === 10, [phone]);
+  const showPhoneError = useMemo(() => phone.length > 0 && phone.length < 10, [phone]);
 
   const maxDobDate = useMemo(() => {
     const date = new Date();
@@ -82,15 +88,64 @@ export default function SignupPage() {
     return () => clearInterval(interval);
   }, [timer]);
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!isPhoneValid) {
-      setMessage("INVALID PHONE: 10 DIGITS REQUIRED");
+  const sendPhoneOtp = async () => {
+    if (!isPhoneValid || timer > 0) return;
+    
+    if (DEV_MODE_PHONE) {
+      setShowOtpField(true);
+      setMessage("DEV MODE: ENTER ANY 6 DIGITS TO VERIFY");
+      setTimer(30);
       return;
     }
 
-    if (step === 1 && dob && !isAdult) {
+    setLoading(true);
+    setMessage('');
+    const { error } = await supabase.auth.signInWithOtp({ phone: `+91${phone}` });
+    
+    if (error) {
+      setMessage(error.message.toUpperCase());
+    } else {
+      setShowOtpField(true);
+      setTimer(60);
+      setMessage("OTP SENT TO YOUR MOBILE");
+    }
+    setLoading(false);
+  };
+
+  const verifyPhoneOtp = async () => {
+    if (DEV_MODE_PHONE) {
+      setIsPhoneVerified(true);
+      setShowOtpField(false);
+      setMessage("PHONE VERIFIED (BYPASSED)");
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.verifyOtp({ 
+      phone: `+91${phone}`, 
+      token: otp, 
+      type: 'sms' 
+    });
+
+    if (error) {
+      setMessage("INVALID OTP. PLEASE CHECK AND TRY AGAIN.");
+    } else {
+      setIsPhoneVerified(true);
+      setShowOtpField(false);
+      setMessage("PHONE VERIFIED SUCCESSFULLY");
+    }
+    setLoading(false);
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!isPhoneVerified) {
+      setMessage("PLEASE VERIFY YOUR PHONE NUMBER FIRST.");
+      return;
+    }
+
+    if (dob && !isAdult) {
       setMessage("MEMBERSHIP DENIED: YOU MUST BE 16+ TO JOIN.");
       return;
     }
@@ -98,40 +153,36 @@ export default function SignupPage() {
     setLoading(true);
     setMessage('');
 
-    if (step === 1) {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        phone: phone, 
-        options: {
-          data: { 
-            first_name: firstName.toUpperCase(),
-            last_name: lastName.toUpperCase(),
-            full_name: `${firstName} ${lastName}`.toUpperCase(),
-            profession: profession.toUpperCase(),
-            location: location,
-            dob: dob,
-          },
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      phone: `+91${phone}`,
+      options: {
+        data: { 
+          first_name: firstName.toUpperCase(),
+          last_name: lastName.toUpperCase(),
+          full_name: `${firstName} ${lastName}`.toUpperCase(),
+          profession: profession.toUpperCase(),
+          location: location,
+          dob: dob,
         },
-      });
+      },
+    });
 
-      if (error) {
-        if (error.message.toLowerCase().includes("16") || error.message.toLowerCase().includes("denied")) {
-          setMessage("MEMBERSHIP DENIED: AGE MUST BE 16 OR OLDER.");
-        } else {
-          setMessage(error.message);
-        }
-        setLoading(false);
+    if (error) {
+      if (error.message.toLowerCase().includes("16") || error.message.toLowerCase().includes("denied")) {
+        setMessage("MEMBERSHIP DENIED: AGE MUST BE 16 OR OLDER.");
       } else {
-        await supabase.auth.signOut();
-        setMessage('REGISTRATION SUCCESSFUL! Head back to Login.');
-        setLoading(false);
-        setTimeout(() => router.push('/auth/login'), 3000);
+        setMessage(error.message.toUpperCase());
       }
+      setLoading(false);
     } else {
-      const { error } = await supabase.auth.verifyOtp({ phone, token: otp, type: 'sms' });
-      if (error) setMessage(error.message);
-      else router.push('/'); 
+      if (DEV_MODE_EMAIL) {
+        setMessage('REGISTRATION SUCCESSFUL! ENTERING...');
+        setTimeout(() => router.push('/auth/login'), 2500);
+      } else {
+        setMessage('CHECK YOUR EMAIL TO ACTIVATE YOUR TRIBE ACCOUNT!');
+      }
       setLoading(false);
     }
   };
@@ -168,126 +219,151 @@ export default function SignupPage() {
           </div>
 
           <div className="relative z-10">
-            <h2 className="text-2xl font-black uppercase italic tracking-tighter mb-6 text-center text-white">
-              {step === 1 ? <>Join the <span className="text-brandRed">Tribe.</span></> : <>Verify <span className="text-brandRed">Phone.</span></>}
-            </h2>
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">
+                Join the <span className="text-brandRed">Tribe.</span>
+              </h2>
+              {(DEV_MODE_PHONE || DEV_MODE_EMAIL) && (
+                <span className="text-[7px] font-black tracking-[0.5em] text-brandRed block mt-2 animate-pulse uppercase">
+                  {/* [ Dev Testing Active ] */}
+                </span>
+              )}
+            </div>
 
             <form onSubmit={handleSignup} className="space-y-3.5">
-              {step === 1 ? (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input 
-                      type="text" placeholder="FIRST NAME" required
-                      className="bg-black/40 border border-white/10 p-4 rounded-xl font-bold text-[10px] tracking-widest focus:border-brandRed transition-all outline-none text-white"
-                      value={firstName} onChange={(e) => setFirstName(e.target.value)}
-                    />
-                    <input 
-                      type="text" placeholder="LAST NAME" required
-                      className="bg-black/40 border border-white/10 p-4 rounded-xl font-bold text-[10px] tracking-widest focus:border-brandRed transition-all outline-none text-white"
-                      value={lastName} onChange={(e) => setLastName(e.target.value)}
-                    />
-                  </div>
+              <div className="grid grid-cols-2 gap-3">
+                <input 
+                  type="text" placeholder="FIRST NAME" required
+                  className="bg-black/40 border border-white/10 p-4 rounded-xl font-bold text-[10px] tracking-widest focus:border-brandRed transition-all outline-none text-white uppercase"
+                  value={firstName} onChange={(e) => setFirstName(e.target.value)}
+                />
+                <input 
+                  type="text" placeholder="LAST NAME" required
+                  className="bg-black/40 border border-white/10 p-4 rounded-xl font-bold text-[10px] tracking-widest focus:border-brandRed transition-all outline-none text-white uppercase"
+                  value={lastName} onChange={(e) => setLastName(e.target.value)}
+                />
+              </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="relative group">
-                      <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
-                      <input 
-                        type="text" placeholder="PROFESSION" required
-                        className="w-full bg-black/40 border border-white/10 p-4 pl-11 rounded-xl font-bold text-[10px] tracking-widest focus:border-brandRed transition-all outline-none text-white"
-                        value={profession} onChange={(e) => setProfession(e.target.value)}
-                      />
-                    </div>
-                    
-                    <div 
-                      className="relative group cursor-pointer bg-black/40 border border-white/10 p-4 rounded-xl flex items-center gap-3 focus-within:border-brandRed transition-all"
-                      onClick={() => dateInputRef.current?.showPicker()}
-                    >
-                      <CalendarIcon size={14} className={dob ? "text-brandRed" : "text-white/20"} />
-                      <span className={`font-bold text-[9px] tracking-widest uppercase truncate ${dob ? "text-white" : "text-zinc-500"}`}>
-                        {dob ? new Date(dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "BIRTH DATE"}
-                      </span>
-                      <input 
-                        ref={dateInputRef}
-                        type="date" 
-                        required
-                        max={maxDobDate} 
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                        value={dob} 
-                        onChange={(e) => setDob(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="relative group">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
-                    <select 
-                      required
-                      className="w-full bg-black border border-white/10 p-4 pl-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white appearance-none cursor-pointer"
-                      value={location} onChange={(e) => setLocation(e.target.value)}
-                    >
-                      <option value="" disabled className="bg-zinc-900">SELECT AREA</option>
-                      {PUNE_AREAS.map(area => (
-                        <option key={area} value={area} className="bg-zinc-900">{area}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="relative group">
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
-                        <input 
-                        type="tel" placeholder="PHONE NUMBER" required maxLength={10}
-                        className={`w-full bg-black/40 border p-4 pl-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white ${showPhoneError ? 'border-brandRed/50' : 'border-white/10'}`}
-                        value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                        />
-                    </div>
-                    {showPhoneError && (
-                        <p className="text-[8px] font-black uppercase text-brandRed tracking-widest ml-4 animate-pulse">
-                        Invalid Number: 10 Digits Required
-                        </p>
-                    )}
-                  </div>
-
-                  <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
-                    <input 
-                      type="email" placeholder="EMAIL" required
-                      className="w-full bg-black/40 border border-white/10 p-4 pl-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white"
-                      value={email} onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
-                    <input 
-                      type={showPassword ? "text" : "password"} placeholder="PASSWORD" required
-                      className="w-full bg-black/40 border border-white/10 p-4 pl-11 pr-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white"
-                      value={password} onChange={(e) => setPassword(e.target.value)}
-                    />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-brandRed transition-colors">
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="space-y-6 text-center">
-                  <p className="text-[10px] text-zinc-400 font-bold tracking-widest uppercase leading-relaxed">
-                    OTP sent to <span className="text-white">{phone}</span>
-                  </p>
-                  
-                  <div className="relative group">
-                    <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 text-brandRed" size={18} />
-                    <input 
-                      type="text" placeholder="######" required maxLength={6}
-                      className="w-full bg-black/60 border border-brandRed/50 p-5 pl-12 rounded-2xl font-black text-xl tracking-[0.5em] focus:border-brandRed transition-all outline-none text-white text-center"
-                      value={otp} onChange={(e) => setOtp(e.target.value)}
-                    />
-                  </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="relative group">
+                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
+                  <input 
+                    type="text" placeholder="PROFESSION" required
+                    className="w-full bg-black/40 border border-white/10 p-4 pl-11 rounded-xl font-bold text-[10px] tracking-widest focus:border-brandRed transition-all outline-none text-white"
+                    value={profession} onChange={(e) => setProfession(e.target.value)}
+                  />
                 </div>
-              )}
+                
+                <div 
+                  className="relative group cursor-pointer bg-black/40 border border-white/10 p-4 rounded-xl flex items-center gap-3 focus-within:border-brandRed transition-all"
+                  onClick={() => dateInputRef.current?.showPicker()}
+                >
+                  <CalendarIcon size={14} className={dob ? "text-brandRed" : "text-white/20"} />
+                  <span className={`font-bold text-[9px] tracking-widest uppercase truncate ${dob ? "text-white" : "text-zinc-500"}`}>
+                    {dob ? new Date(dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "BIRTH DATE"}
+                  </span>
+                  <input 
+                    ref={dateInputRef}
+                    type="date" 
+                    required
+                    max={maxDobDate} 
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    value={dob} 
+                    onChange={(e) => setDob(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="relative group">
+                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
+                <select 
+                  required
+                  className="w-full bg-black border border-white/10 p-4 pl-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white appearance-none cursor-pointer"
+                  value={location} onChange={(e) => setLocation(e.target.value)}
+                >
+                  <option value="" disabled className="bg-zinc-900">SELECT AREA</option>
+                  {PUNE_AREAS.map(area => (
+                    <option key={area} value={area} className="bg-zinc-900">{area}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="relative flex items-center group">
+                  <Phone className="absolute left-4 text-white/20" size={14} />
+                  <input 
+                    type="tel" placeholder="PHONE NUMBER" required maxLength={10} disabled={isPhoneVerified && !DEV_MODE_PHONE}
+                    className={`w-full bg-black/40 border p-4 pl-11 pr-24 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white ${showPhoneError ? 'border-brandRed/50' : 'border-white/10'}`}
+                    value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                  />
+                  {!isPhoneVerified && isPhoneValid && (
+                    <button 
+                      type="button" 
+                      onClick={sendPhoneOtp}
+                      disabled={timer > 0}
+                      className="absolute right-2 px-4 py-2 bg-brandRed text-white text-[9px] font-black rounded-lg hover:bg-white hover:text-black transition-all disabled:opacity-50"
+                    >
+                      {timer > 0 ? `WAIT ${timer}s` : "VERIFY"}
+                    </button>
+                  )}
+                  {isPhoneVerified && <CheckCircle2 className="absolute right-4 text-green-500" size={18} />}
+                </div>
+                {showPhoneError && (
+                  <p className="text-[8px] font-black uppercase text-brandRed tracking-widest ml-4 animate-pulse">
+                    Invalid Number: 10 Digits Required
+                  </p>
+                )}
+
+                <AnimatePresence>
+                  {showOtpField && !isPhoneVerified && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }} 
+                      animate={{ height: 'auto', opacity: 1 }} 
+                      exit={{ height: 0, opacity: 0 }} 
+                      className="relative flex items-center mt-2 overflow-hidden"
+                    >
+                      <Smartphone className="absolute left-4 text-brandRed" size={14} />
+                      <input 
+                        type="text" placeholder="ENTER 6-DIGIT OTP" maxLength={6}
+                        className="w-full bg-brandRed/10 border border-brandRed/30 p-4 pl-11 pr-24 rounded-xl font-black text-[11px] tracking-[0.3em] outline-none text-white"
+                        value={otp} onChange={(e) => setOtp(e.target.value)}
+                      />
+                      <button 
+                        type="button" 
+                        onClick={verifyPhoneOtp}
+                        className="absolute right-2 px-4 py-2 bg-white text-black text-[9px] font-black rounded-lg transition-all"
+                      >
+                        SUBMIT
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
+                <input 
+                  type="email" placeholder="EMAIL" required
+                  suppressHydrationWarning
+                  className="w-full bg-black/40 border border-white/10 p-4 pl-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white"
+                  value={email} onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
+                <input 
+                  type={showPassword ? "text" : "password"} placeholder="PASSWORD" required
+                  className="w-full bg-black/40 border border-white/10 p-4 pl-11 pr-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white"
+                  value={password} onChange={(e) => setPassword(e.target.value)}
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-brandRed transition-colors">
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
 
               {message && (
-                <p className={`text-[9px] font-black uppercase text-center py-2 px-4 rounded-lg bg-black/50 border ${message.includes('SUCCESSFUL') ? 'text-green-500 border-green-500/20' : 'text-brandRed border-brandRed/20'}`}>
+                <p className={`text-[9px] font-black uppercase text-center py-2 px-4 rounded-lg bg-black/50 border ${message.includes('SUCCESSFUL') || message.includes('VERIFIED') ? 'text-green-500 border-green-500/20' : 'text-brandRed border-brandRed/20'}`}>
                   {message}
                 </p>
               )}
@@ -302,12 +378,12 @@ export default function SignupPage() {
               )}
 
               <button 
-                disabled={Boolean(loading || (step === 1 && dob && !isAdult) || (phone.length > 0 && !isPhoneValid))} 
-                className={`w-full py-4 text-white font-black uppercase tracking-[0.3em] rounded-xl transition-all shadow-xl active:scale-95 text-[10px] flex items-center justify-center gap-2 mt-4 ${
-                  (loading || (step === 1 && dob && !isAdult) || (phone.length > 0 && !isPhoneValid)) ? "bg-zinc-800 cursor-not-allowed opacity-50" : "bg-brandRed hover:bg-white hover:text-black"
+                disabled={Boolean(loading || (dob && !isAdult) || !isPhoneVerified)} 
+                className={`w-full py-4 text-white font-black uppercase tracking-[0.3em] rounded-xl transition-all shadow-xl active:scale-95 text-[12px] flex items-center justify-center gap-2 mt-4 ${
+                  (loading || (dob && !isAdult) || !isPhoneVerified) ? "bg-zinc-800 cursor-not-allowed opacity-50" : "bg-brandRed hover:bg-white hover:text-black"
                 }`}
               >
-                {loading ? 'Processing...' : step === 1 ? 'Tap to Verify' : 'Join Tribe'} <ArrowRight size={14} />
+                {loading ? 'Processing...' : 'Tap to Register'} <ArrowRight size={14} />
               </button>
             </form>
 
