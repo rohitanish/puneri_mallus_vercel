@@ -27,11 +27,13 @@ export default function JammingSection({ cycle }: { cycle: boolean }) {
         <div className="lg:col-span-7 relative h-[600px] rounded-[60px] overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] group">
           {/* Static Image Layer */}
           <Image 
-            src="/about/image_1.jpeg" 
-            alt="Jamming" 
-            fill 
-            className={`object-cover transition-opacity duration-1000 ease-in-out ${cycle ? 'opacity-0' : 'opacity-80'}`} 
-          />
+  src="/about/image_1.jpeg" 
+  alt="Jamming" 
+  fill 
+  // Tells the browser to load 100% width on mobile and 50% on desktop
+  sizes="(max-width: 768px) 100vw, 50vw" 
+  className={`object-cover transition-opacity duration-1000 ease-in-out ${cycle ? 'opacity-0' : 'opacity-80'}`} 
+/>
           
           {/* Video Layer */}
           <video 

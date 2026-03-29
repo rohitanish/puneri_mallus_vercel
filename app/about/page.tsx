@@ -149,11 +149,13 @@ export default function AboutPage() {
 <section className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-20 items-center mb-40 px-6">
   <div className="relative aspect-square rounded-[40px] overflow-hidden border border-white/10 group shadow-2xl bg-zinc-950">
     <Image 
-      src="/about/community.jpeg" 
-      alt="Community" 
-      fill 
-      className="object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-105" 
-    />
+  src="/about/community.jpeg" 
+  alt="Community" 
+  fill 
+  // Tells the browser: "Use full screen width on mobile, half on desktop."
+  sizes="(max-width: 768px) 100vw, 50vw" 
+  className="object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-105" 
+/>
     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
   </div>
   
@@ -236,8 +238,14 @@ export default function AboutPage() {
               </div>
               <div className="w-full lg:w-3/5 order-1 lg:order-2">
                 <div className="relative h-[500px] lg:h-[700px] w-full rounded-[50px] overflow-hidden border border-white/5 shadow-2xl">
-                  <Image src="/about/agams.jpg" alt="Agam" fill className="object-cover group-hover:scale-110 transition-transform duration-1000" />
-                </div>
+<Image 
+  src="/about/agams.jpg" 
+  alt="Agam" 
+  fill 
+  // Optimized for a responsive grid: Full width on mobile, 1/2 on tablet, 1/3 on desktop
+  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+  className="object-cover group-hover:scale-110 transition-transform duration-1000" 
+/>                </div>
               </div>
             </div>
           </div>
@@ -250,12 +258,14 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             <div className="lg:col-span-7 relative h-[600px] rounded-[60px] overflow-hidden border border-white/10 shadow-2xl bg-zinc-950">
               <Image 
-                src="/about/image_1.jpeg" 
-                alt="Jamming" 
-                fill 
-                className={`object-cover transition-opacity duration-500 ease-in-out ${cycle ? 'opacity-0' : 'opacity-80'}`} 
-                priority
-              />
+  src="/about/image_1.jpeg" 
+  alt="Jamming" 
+  fill 
+  // Tells the browser to load a 100% width version for mobile and 50% for desktop
+  sizes="(max-width: 768px) 100vw, 50vw" 
+  className={`object-cover transition-opacity duration-500 ease-in-out ${cycle ? 'opacity-0' : 'opacity-80'}`} 
+  priority
+/>
               <video 
                 autoPlay loop muted playsInline preload="auto"
                 className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${cycle ? 'opacity-80' : 'opacity-0'}`}
@@ -314,11 +324,14 @@ export default function AboutPage() {
             </div>
             <div className="relative h-[650px] w-full rounded-[60px] overflow-hidden border border-white/10 shadow-2xl">
               <Image 
-                src="/about/beauty.jpeg" 
-                alt="Pageant" 
-                fill 
-                className={`object-cover transition-opacity duration-1000 ${cycle ? 'opacity-0' : 'opacity-80'}`} 
-              />
+  src="/about/beauty.jpeg" 
+  alt="Pageant" 
+  fill 
+  // Tells the browser: "On mobile, use full screen width. On desktop, use half."
+  // This drastically reduces the file size for phone users.
+  sizes="(max-width: 768px) 100vw, 50vw" 
+  className={`object-cover transition-opacity duration-1000 ${cycle ? 'opacity-0' : 'opacity-80'}`} 
+/>
               <video 
                 autoPlay loop muted playsInline 
                 className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${cycle ? 'opacity-80' : 'opacity-0'}`}

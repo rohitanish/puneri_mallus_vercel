@@ -77,18 +77,21 @@ export default function Navbar() {
           {/* Removed py-2 to shift the nav up and save space */}
           <Link href="/" className="block group flex-shrink-0">
             <Image
-              src="/logo.png"
-              alt="Puneri Mallus"
-              width={400}
-              height={120}
-              className={`object-contain object-left transition-all duration-300 group-hover:scale-105
-                drop-shadow-[0_0_20px_rgba(255,0,0,0.4)] w-auto ${
-                scrolled
-                  ? 'h-20 sm:h-24 md:h-28'
-                : 'h-24 sm:h-28 md:h-32 lg:h-36'
-              }`}
-              priority
-            />
+  src="/logo.png"
+  alt="Puneri Mallus"
+  width={400}
+  height={120}
+  // This tells the browser: "The logo will never be wider than 400px"
+  // It prevents the browser from loading a massive version on high-DPI phones.
+  sizes="(max-width: 768px) 150px, 400px"
+  className={`object-contain object-left transition-all duration-300 group-hover:scale-105
+    drop-shadow-[0_0_20px_rgba(255,0,0,0.4)] w-auto ${
+    scrolled
+      ? 'h-20 sm:h-24 md:h-28'
+      : 'h-24 sm:h-28 md:h-32 lg:h-36'
+  }`}
+  priority
+/>
           </Link>
 
           {/* Adjusted gap values (lg:gap-5) to prevent squishing on smaller 13/14-inch laptops */}

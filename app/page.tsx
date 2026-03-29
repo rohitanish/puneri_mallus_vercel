@@ -298,18 +298,31 @@ export default function Home() {
             </h2>
             <div className="flex flex-wrap justify-center gap-10 sm:gap-16 lg:gap-32">
               <div className="group w-full max-w-[260px] sm:max-w-[340px]">
-                <div className="aspect-[3/4] bg-zinc-950/60 backdrop-blur-md rounded-[32px] sm:rounded-[50px] mb-6 sm:mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 shadow-2xl relative">
-                  <Image src="/founders/suchi.jpg" alt="Suchi" fill className="object-cover group-hover:scale-105 transition-all duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                </div>
-                <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-white">Sucheendran K.C</h4>
-                <p className="text-brandRed font-black uppercase text-[10px] tracking-[0.4em] sm:tracking-[0.5em] mt-2 sm:mt-3">Founder</p>
-              </div>
+  <div className="aspect-[3/4] bg-zinc-950/60 backdrop-blur-md rounded-[32px] sm:rounded-[50px] mb-6 sm:mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 shadow-2xl relative">
+    <Image 
+      src="/founders/suchi.jpg" 
+      alt="Suchi" 
+      fill 
+      // MATCHED: Responsive sizes to stop layout shift and optimize mobile load
+      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+      className="object-cover group-hover:scale-105 transition-all duration-700" 
+    />
+    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+  </div>
+  <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-white">Sucheendran K.C</h4>
+  <p className="text-brandRed font-black uppercase text-[10px] tracking-[0.4em] sm:tracking-[0.5em] mt-2 sm:mt-3">Founder</p>
+</div>
 
               <div className="group w-full max-w-[260px] sm:max-w-[340px]">
                 <div className="aspect-[3/4] bg-zinc-950/60 backdrop-blur-md rounded-[32px] sm:rounded-[50px] mb-6 sm:mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 shadow-2xl relative">
-                  <Image src="/founders/shehanas.jpg" alt="Shena" fill className="object-cover group-hover:scale-105 transition-all duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+<Image 
+  src="/founders/shehanas.jpg" 
+  alt="Shena" 
+  fill 
+  // Optimized for mobile (full width), tablet (half), and desktop (one-third)
+  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+  className="object-cover group-hover:scale-105 transition-all duration-700" 
+/>                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                 </div>
                 <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-white">Shehanas  </h4>
                 <p className="text-brandRed font-black uppercase text-[10px] tracking-[0.4em] sm:tracking-[0.5em] mt-2 sm:mt-3">Co-Founder</p>

@@ -74,13 +74,15 @@ export default function Footer() {
             <Link href="/" className="inline-block group">
               {/* Responsive Logo Sizing Fix */}
               <div className="relative h-20 w-[240px] sm:h-28 sm:w-[320px] md:h-36 md:w-[400px] lg:h-48 lg:w-[480px]">
-                <Image
-                  src="/logo.png"
-                  alt="Puneri Mallus"
-                  fill
-                  className="object-contain object-left transition-all duration-500 group-hover:drop-shadow-[0_0_40px_rgba(255,0,0,0.5)]"
-                  priority
-                />
+               <Image
+  src="/logo.png"
+  alt="Puneri Mallus"
+  fill
+  // FIXED: Tells the browser the logo is small on mobile and restricted on desktop
+  sizes="(max-width: 768px) 200px, 450px"
+  className="object-contain object-left transition-all duration-500 group-hover:drop-shadow-[0_0_40px_rgba(255,0,0,0.5)]"
+  priority
+/>
               </div>
             </Link>
             <p className="text-zinc-500 text-[10px] md:text-[11px] font-medium uppercase tracking-[0.4em] leading-relaxed max-w-[280px]">

@@ -86,14 +86,16 @@ export default function EventCard({
         
         {/* IMAGE SECTION */}
         <div className="relative w-full aspect-[16/11] overflow-hidden">
-          <Image 
-            src={safeSrc} 
-            alt={title} 
-            fill 
-            className="object-cover transition-all duration-1000 group-hover:scale-105" 
-            sizes="(max-w-7xl) 33vw, 100vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent z-10" />
+        <Image 
+          src={safeSrc} 
+          alt={title} 
+          fill 
+          className="object-cover transition-all duration-1000 group-hover:scale-105" 
+          // FIXED: Standardized sizes for responsive grid performance
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          priority={isUpcoming} // Added priority to upcoming events to boost LCP score
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent z-10" />
           
           {/* CATEGORY BADGE */}
           {category && (

@@ -90,8 +90,15 @@ export default function EventsPage() {
       onKeyDownCapture={stopSlider}
     >
       <motion.div style={{ y }} className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-black">
-        <Image src="/events/eventsback.jpg" alt="BG" fill className="object-cover opacity-[0.45] brightness-[0.8] scale-110 saturate-[1.2]" priority />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303] z-[1]" />
+<Image 
+    src="/events/eventsback.jpg" 
+    alt="BG" 
+    fill 
+    className="object-cover opacity-[0.45] brightness-[0.8] scale-110 saturate-[1.2]" 
+    priority 
+    // ADD THIS:
+    sizes="100vw"
+  />        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303] z-[1]" />
       </motion.div>
 
       <div className="max-w-7xl mx-auto relative z-10 pt-32 pb-32 px-6">
@@ -142,6 +149,9 @@ export default function EventsPage() {
                     <Image 
                       src={item.image || "/about/placeholder.jpeg"} 
                       alt={item.title} fill unoptimized 
+                      // ADD THIS:
+    // Mobile: 100% width, Tablet: 50% width, Desktop: 33% width
+    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       className={`object-cover group-hover:scale-105 transition-all duration-700 ${!item.isUpcoming ? 'grayscale opacity-60' : 'grayscale-0'}`} 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />

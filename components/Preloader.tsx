@@ -55,13 +55,15 @@ export default function Preloader() {
               transition={{ duration: 1, ease: "easeOut" }}
             >
               <Image 
-                src="/logo.png" 
-                alt="Puneri Mallus" 
-                width={450} 
-                height={150} 
-                className="h-28 md:h-44 w-auto object-contain drop-shadow-[0_0_40px_rgba(255,0,0,0.3)]"
-                priority
-              />
+  src="/logo.png" 
+  alt="Puneri Mallus" 
+  width={450} 
+  height={150} 
+  // Added sizes to fix the performance warning and improve mobile loading
+  sizes="(max-width: 768px) 200px, 450px"
+  className="h-28 md:h-44 w-auto object-contain drop-shadow-[0_0_40px_rgba(255,0,0,0.3)]"
+  priority
+/>
             </motion.div>
 
             {/* 3. MODERN LOADING ENGINE */}

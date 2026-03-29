@@ -218,14 +218,16 @@ export default function SignupPage() {
           
           <div className="flex justify-center mb-8 relative z-10">
             <Link href="/">
-              <Image 
-                src="/logo.png" 
-                alt="Logo" 
-                width={500} 
-                height={150} 
-                className="h-24 md:h-32 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,0,0,0.5)]" 
-                priority 
-              />
+             <Image 
+  src="/logo.png" 
+  alt="Logo" 
+  width={500} 
+  height={150} 
+  // Optimized for mobile width while maintaining desktop sharpness
+  sizes="(max-width: 768px) 250px, 500px"
+  className="h-24 md:h-32 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,0,0,0.5)]" 
+  priority 
+/>
             </Link>
           </div>
 
