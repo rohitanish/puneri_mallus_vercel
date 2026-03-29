@@ -102,27 +102,34 @@ export default function Preloader() {
               </div>
             </div>
 
-            {/* 4. MANTRA: Minimalist Stack */}
+            {/* 4. MANTRA: Minimalist Stack - FIXED VISIBILITY */}
             <div className="flex flex-col items-center space-y-4 pt-4">
-              {mantra.map((text, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0 }}
-                  animate={{ 
-                    opacity: percent > (i * 33) ? 1 : 0,
-                    x: percent > (i * 33) ? 0 : -10 
-                  }}
-                  className="flex items-center gap-4"
-                >
-                   {/* Modern dash indicator */}
-                   <div className={`h-[1px] transition-all duration-1000 ${percent > (i * 33) ? 'w-6 bg-brandRed' : 'w-0 bg-zinc-800'}`} />
-                   <p className={`text-[10px] md:text-[12px] font-black uppercase tracking-[0.6em] transition-all duration-1000 ${
-                    text === "ZERO DIVIDE" ? "text-brandRed" : "text-white/20"
-                  }`}>
-                    {text}
-                  </p>
-                </motion.div>
-              ))}
+              {mantra.map((text, i) => {
+                const isSynced = percent > (i * 33);
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0 }}
+                    animate={{ 
+                      opacity: isSynced ? 1 : 0.1, // High contrast for synced items
+                      x: isSynced ? 0 : -10 
+                    }}
+                    transition={{ duration: 0.8 }}
+                    className="flex items-center gap-4"
+                  >
+                    {/* Modern dash indicator */}
+                    <div className={`h-[1px] transition-all duration-1000 ${isSynced ? 'w-6 bg-brandRed shadow-[0_0_8px_#FF0000]' : 'w-0 bg-zinc-800'}`} />
+                    
+                    <p className={`text-[10px] md:text-[12px] font-black uppercase tracking-[0.6em] transition-all duration-700 ${
+                      isSynced 
+                        ? (text === "ZERO DIVIDE" ? "text-brandRed" : "text-white") 
+                        : "text-white/10"
+                    }`}>
+                      {text}
+                    </p>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
 
