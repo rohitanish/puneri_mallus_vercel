@@ -30,3 +30,12 @@ body::before {
   z-index: -1;
   pointer-events: none;
 } 
+
+@layer utilities {
+  .gpu-boost {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000;
+    will-change: transform, opacity;
+  }
+}

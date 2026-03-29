@@ -102,17 +102,34 @@ export default function EventCard({
             </span>
           )}
 
-          {/* COUNTDOWN OVERLAY */}
+          {/* COUNTDOWN OVERLAY - UPDATED LEGIBILITY */}
           {isUpcoming && isLive && (
-            <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-700 z-30">
+            <div className="absolute inset-0 bg-black/70 flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-700 z-30">
               <div className="text-center">
-                <p className="text-[9px] tracking-[.4em] text-brandRed mb-4 uppercase font-black">Syncing Pulse</p>
-                <div className="flex gap-3 text-white font-black italic text-3xl tracking-tighter">
-                   <div className="flex flex-col"><span className="leading-none">{timeLeft.days}</span><span className="text-[8px] not-italic text-zinc-500 uppercase mt-1">D</span></div>
-                   <div className="text-brandRed">:</div>
-                   <div className="flex flex-col"><span className="leading-none">{timeLeft.hours}</span><span className="text-[8px] not-italic text-zinc-500 uppercase mt-1">H</span></div>
-                   <div className="text-brandRed">:</div>
-                   <div className="flex flex-col"><span className="leading-none">{timeLeft.mins}</span><span className="text-[8px] not-italic text-zinc-500 uppercase mt-1">M</span></div>
+                <p className="text-[10px] tracking-[.4em] text-brandRed mb-5 uppercase font-black">Syncing Pulse</p>
+                
+                <div className="flex gap-4 text-white font-black italic text-4xl tracking-tighter">
+                   {/* Days */}
+                   <div className="flex flex-col items-center">
+                     <span className="leading-none">{timeLeft.days}</span>
+                     <span className="text-[10px] not-italic text-zinc-400 uppercase font-black tracking-widest mt-2">Days</span>
+                   </div>
+                   
+                   <div className="text-brandRed animate-pulse self-start mt-[-4px]">:</div>
+                   
+                   {/* Hours */}
+                   <div className="flex flex-col items-center">
+                     <span className="leading-none">{timeLeft.hours}</span>
+                     <span className="text-[10px] not-italic text-zinc-400 uppercase font-black tracking-widest mt-2">Hrs</span>
+                   </div>
+                   
+                   <div className="text-brandRed animate-pulse self-start mt-[-4px]">:</div>
+                   
+                   {/* Minutes */}
+                   <div className="flex flex-col items-center">
+                     <span className="leading-none">{timeLeft.mins}</span>
+                     <span className="text-[10px] not-italic text-zinc-400 uppercase font-black tracking-widest mt-2">Mins</span>
+                   </div>
                 </div>
               </div>
             </div>
