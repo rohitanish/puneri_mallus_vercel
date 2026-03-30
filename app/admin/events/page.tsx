@@ -419,7 +419,7 @@ export default function AdminEventsPage() {
                   </div>
                 ))}
               </div>
-            ) : <p className="text-[10px] font-black text-zinc-800 uppercase italic">No Active Nodes</p>}
+            ) : <p className="text-[10px] font-black text-zinc-800 uppercase italic">No Active Events</p>}
           </section>
 
           <section className="space-y-8 pt-10">

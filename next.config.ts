@@ -2,13 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    // 1. Force modern formats (WebP is fast, AVIF is even smaller)
     formats: ['image/avif', 'image/webp'],
-    
-    // 2. Optimization settings
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    
+
+    // Added: cache optimized images for 60 days (default is only 60 seconds)
+    minimumCacheTTL: 60 * 60 * 24 * 60,
+
     remotePatterns: [
       {
         protocol: 'https',
@@ -19,6 +19,13 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',
+      },
+      // Added: allow Supabase transform API domain
+      {
+        protocol: 'https',
+        hostname: 'bhfrgcphqmbocplfcvbg.supabase.co',
+        port: '',
+        pathname: '/storage/v1/render/image/public/**',
       },
     ],
   },

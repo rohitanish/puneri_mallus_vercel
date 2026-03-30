@@ -27,6 +27,20 @@ interface TeamMember {
   role: string;
   image: string;
 }
+// For local images, generate blurDataURL at build time using next/image
+// Quickest approach: use a tiny base64 placeholder
+
+const shimmer = (w: number, h: number) => `
+<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#111"/>
+</svg>`;
+
+const toBase64 = (str: string) =>
+  typeof window === 'undefined'
+    ? Buffer.from(str).toString('base64')
+    : window.btoa(str);
+
+export const blurPlaceholder = `data:image/svg+xml;base64,${toBase64(shimmer(700, 475))}`;
 const LaserDivider = () => (
   <div className="relative w-full h-px flex items-center justify-center overflow-visible my-32">
     <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-brandRed/40 to-transparent" />
@@ -131,6 +145,7 @@ export default function AboutPage() {
           alt="About Background"
           fill
           className="object-cover object-center opacity-40 brightness-[0.7] saturate-[0.9]"
+          blurDataURL={blurPlaceholder}
           priority
         />
         {/* ATMOSPHERIC OVERLAYS */}
@@ -152,6 +167,7 @@ export default function AboutPage() {
   src="/about/community.jpeg" 
   alt="Community" 
   fill 
+  blurDataURL={blurPlaceholder}
   // Tells the browser: "Use full screen width on mobile, half on desktop."
   sizes="(max-width: 768px) 100vw, 50vw" 
   className="object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-105" 
@@ -242,6 +258,7 @@ export default function AboutPage() {
   src="/about/agams.jpg" 
   alt="Agam" 
   fill 
+  blurDataURL={blurPlaceholder}
   // Optimized for a responsive grid: Full width on mobile, 1/2 on tablet, 1/3 on desktop
   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
   className="object-cover group-hover:scale-110 transition-transform duration-1000" 
@@ -261,6 +278,7 @@ export default function AboutPage() {
   src="/about/image_1.jpeg" 
   alt="Jamming" 
   fill 
+  blurDataURL={blurPlaceholder}
   // Tells the browser to load a 100% width version for mobile and 50% for desktop
   sizes="(max-width: 768px) 100vw, 50vw" 
   className={`object-cover transition-opacity duration-500 ease-in-out ${cycle ? 'opacity-0' : 'opacity-80'}`} 
@@ -327,6 +345,7 @@ export default function AboutPage() {
   src="/about/beauty.jpeg" 
   alt="Pageant" 
   fill 
+  blurDataURL={blurPlaceholder}
   // Tells the browser: "On mobile, use full screen width. On desktop, use half."
   // This drastically reduces the file size for phone users.
   sizes="(max-width: 768px) 100vw, 50vw" 
@@ -365,6 +384,7 @@ export default function AboutPage() {
                       src={member.image} 
                       alt={member.name} 
                       fill
+                      blurDataURL={blurPlaceholder}
                       sizes="(max-width: 768px) 50vw, 33vw"
                       className="object-cover transition-all duration-700 brightness-[0.9] group-hover:brightness-110 saturate-[1.1]" 
                     />
@@ -422,9 +442,10 @@ export default function AboutPage() {
             src={src} 
             alt={`Archive Legacy ${idx + 1}`} 
             fill 
+            blurDataURL={blurPlaceholder}
             sizes="(max-width: 768px) 50vw, 33vw"
             className="object-cover transition-all duration-700 grayscale group-hover:grayscale-0 group-hover:scale-110" 
-            priority={idx < 3}
+            loading="lazy"  
           />
           <div className="absolute inset-0 bg-brandRed/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
           {/* Decorative Corner Pointers */}
@@ -460,6 +481,7 @@ export default function AboutPage() {
           fill 
           unoptimized 
           className="object-contain" 
+          blurDataURL={blurPlaceholder}
         />
       </motion.div>
       {/* Close Button */}

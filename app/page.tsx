@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { 
@@ -9,7 +9,7 @@ import {
 import EventCard from '@/components/EventCard';
 import DynamicTribeAd from '@/components/Popup';
 
-// COMPACT LASER DIVIDER (Removed the 80px blur element and reduced margin)
+// COMPACT LASER DIVIDER
 const LaserDivider = () => (
   <div className="relative w-full h-px flex items-center justify-center overflow-hidden my-2">
     <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-brandRed/40 to-transparent" />
@@ -17,6 +17,37 @@ const LaserDivider = () => (
     <div className="absolute w-24 h-px bg-white blur-[1.5px] opacity-40 z-20" />
   </div>
 );
+
+// FIX 5: Lazy video — only plays when visible in viewport
+function LazyVideo({ src, className }: { src: string; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setInView(true); },
+      { threshold: 0.1 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className="w-full h-full">
+      {inView && (
+        <video autoPlay loop muted playsInline className={className}>
+          <source src={src} type="video/mp4" />
+        </video>
+      )}
+    </div>
+  );
+}
+
+// FIX 4: Transform Supabase image URLs to use WebP + resize
+const transformSupabaseUrl = (url: string, width: number) => {
+  if (!url?.includes('supabase')) return url;
+  return `${url}?width=${width}&quality=80&format=webp`;
+};
 
 export default function Home() {
   const [slides, setSlides] = useState<any[]>([]);
@@ -47,9 +78,12 @@ export default function Home() {
         const pastFeatured = allEvents
           .filter((e: any) => e.isUpcoming === false && e.featured === true);
 
+        // FIX 4: Transform Supabase URLs before passing to EventCard
         const format = (list: any[]) => list.map(e => ({ 
           ...e, 
-          id: e._id || e.id
+          id: e._id || e.id,
+          image: transformSupabaseUrl(e.image, 600),
+          thumbnail: transformSupabaseUrl(e.thumbnail, 400),
         }));
 
         setUpcoming(format(upcomingNodes).slice(0, 2));
@@ -86,11 +120,14 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-[#030303] text-white selection:bg-brandRed/30 relative overflow-x-hidden w-full">
       
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-black">
+        {/* FIX 1: Added sizes="100vw" and quality={75} to background image */}
         <Image 
           src="/events/main4.jpg" 
           alt="Branded Atmosphere"
           fill
           priority
+          sizes="100vw"
+          quality={75}
           className="object-cover object-center opacity-[0.45] brightness-[1.1] saturate-[1.2] contrast-[1.1]" 
         />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303]/80 z-[1]" />
@@ -118,7 +155,11 @@ export default function Home() {
                     <source src={slide.mediaUrl} type="video/mp4" />
                   </video>
                 ) : (
-                  <Image src={slide.mediaUrl} alt="Slide" fill className="object-cover transition-opacity duration-700" 
+                  // FIX 2: Added sizes="100vw" and quality={80} to slider images
+                  <Image src={slide.mediaUrl} alt="Slide" fill
+                    sizes="100vw"
+                    quality={80}
+                    className="object-cover transition-opacity duration-700" 
                     style={{ opacity: Math.min(((slide.visibility || 60) + 20) / 100, 1), objectPosition: `50% ${slide.vOffset || 50}%` }}
                     priority={index === 0} 
                   />
@@ -259,9 +300,8 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 relative z-30">
               <div className="group relative p-8 sm:p-12 rounded-[24px] sm:rounded-[40px] bg-zinc-950/60 backdrop-blur-xl border border-white/5 hover:border-brandRed/40 transition-all duration-700 overflow-hidden hover:-translate-y-2 shadow-2xl">
                 <div className="absolute inset-0 z-0 opacity-40 group-hover:opacity-80 transition-opacity duration-1000">
-                  <video autoPlay loop muted playsInline className="w-full h-full object-cover">
-                    <source src="/videos/agam-recap.mp4" type="video/mp4" />
-                  </video>
+                  {/* FIX 5: Replaced autoplay video with LazyVideo */}
+                  <LazyVideo src="/videos/agam-recap.mp4" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
                 </div>
                 <div className="relative z-10">
@@ -273,9 +313,8 @@ export default function Home() {
 
               <div className="group relative p-8 sm:p-12 rounded-[24px] sm:rounded-[40px] bg-zinc-950/60 backdrop-blur-xl border border-white/5 hover:border-brandRed/40 transition-all duration-700 overflow-hidden hover:-translate-y-2 shadow-2xl">
                 <div className="absolute inset-0 z-0 opacity-40 group-hover:opacity-80 transition-opacity duration-1000">
-                  <video autoPlay loop muted playsInline className="w-full h-full object-cover">
-                    <source src="/videos/jam.mp4" type="video/mp4" />
-                  </video>
+                  {/* FIX 5: Replaced autoplay video with LazyVideo */}
+                  <LazyVideo src="/videos/jam.mp4" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
                 </div>
                 <div className="relative z-10">
@@ -298,33 +337,38 @@ export default function Home() {
             </h2>
             <div className="flex flex-wrap justify-center gap-10 sm:gap-16 lg:gap-32">
               <div className="group w-full max-w-[260px] sm:max-w-[340px]">
-  <div className="aspect-[3/4] bg-zinc-950/60 backdrop-blur-md rounded-[32px] sm:rounded-[50px] mb-6 sm:mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 shadow-2xl relative">
-    <Image 
-      src="/founders/suchi.jpg" 
-      alt="Suchi" 
-      fill 
-      // MATCHED: Responsive sizes to stop layout shift and optimize mobile load
-      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-      className="object-cover group-hover:scale-105 transition-all duration-700" 
-    />
-    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-  </div>
-  <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-white">Sucheendran K.C</h4>
-  <p className="text-brandRed font-black uppercase text-[10px] tracking-[0.4em] sm:tracking-[0.5em] mt-2 sm:mt-3">Founder</p>
-</div>
+                <div className="aspect-[3/4] bg-zinc-950/60 backdrop-blur-md rounded-[32px] sm:rounded-[50px] mb-6 sm:mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 shadow-2xl relative">
+                  {/* FIX 3: Added quality={80} and loading="lazy" to founder images */}
+                  <Image 
+                    src="/founders/suchi.jpg" 
+                    alt="Suchi" 
+                    fill 
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    quality={80}
+                    loading="lazy"
+                    className="object-cover group-hover:scale-105 transition-all duration-700" 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                </div>
+                <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-white">Sucheendran K.C</h4>
+                <p className="text-brandRed font-black uppercase text-[10px] tracking-[0.4em] sm:tracking-[0.5em] mt-2 sm:mt-3">Founder</p>
+              </div>
 
               <div className="group w-full max-w-[260px] sm:max-w-[340px]">
                 <div className="aspect-[3/4] bg-zinc-950/60 backdrop-blur-md rounded-[32px] sm:rounded-[50px] mb-6 sm:mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 shadow-2xl relative">
-<Image 
-  src="/founders/shehanas.jpg" 
-  alt="Shena" 
-  fill 
-  // Optimized for mobile (full width), tablet (half), and desktop (one-third)
-  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-  className="object-cover group-hover:scale-105 transition-all duration-700" 
-/>                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  {/* FIX 3: Added quality={80} and loading="lazy" to founder images */}
+                  <Image 
+                    src="/founders/shehanas.jpg" 
+                    alt="Shena" 
+                    fill 
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    quality={80}
+                    loading="lazy"
+                    className="object-cover group-hover:scale-105 transition-all duration-700" 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                 </div>
-                <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-white">Shehanas  </h4>
+                <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-white">Shehanas</h4>
                 <p className="text-brandRed font-black uppercase text-[10px] tracking-[0.4em] sm:tracking-[0.5em] mt-2 sm:mt-3">Co-Founder</p>
               </div>
             </div>

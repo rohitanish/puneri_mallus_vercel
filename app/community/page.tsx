@@ -278,7 +278,7 @@ export default function CommunityPage() {
         <div className="text-center mt-10">
           <LaserDivider />
           <div className="flex items-center justify-center gap-8 mt-6 opacity-20 text-[8px] font-black uppercase tracking-[0.4em]">
-            <div className="flex items-center gap-2"><Users size={14} /> {filteredCircles.length} Active Nodes</div>
+            <div className="flex items-center gap-2"><Users size={14} /> {filteredCircles.length} Active Community</div>
             <div className="flex items-center gap-2"><Flame size={14} /> Live Pulse</div>
           </div>
         </div>
