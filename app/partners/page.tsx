@@ -28,7 +28,14 @@ export default function PartnersPage() {
   const [error, setError] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({});
+  const [isMobile, setIsMobile] = useState(false);
 
+useEffect(() => {
+  const check = () => setIsMobile(window.innerWidth < 768);
+  check();
+  window.addEventListener('resize', check);
+  return () => window.removeEventListener('resize', check);
+}, []);
   // ✅ fetch inside useEffect with empty array — runs once only
   useEffect(() => {
     fetch('/api/partners')
@@ -74,24 +81,26 @@ export default function PartnersPage() {
     <div className="min-h-screen bg-[#030303] text-white relative overflow-x-hidden selection:bg-brandRed/30">
       
       {/* BACKGROUND */}
-      <div className="fixed inset-0 z-0 bg-black">
-        <Image 
-          src="/events/partner_3.png" 
-          alt="BG" 
-          fill
-          sizes="100vw"
-          className="object-cover opacity-[0.5] brightness-[0.8]" 
-          priority 
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-[#030303] z-[1]" />
-      </div>
-
+     <div
+  className="fixed inset-0 z-0"
+  style={{
+    backgroundImage: 'url(/events/partner_3.png)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    opacity: 0.5,
+    filter: 'brightness(0.8)',
+    transform: 'translateZ(0)',
+    willChange: 'transform',
+  }}
+/>
+<div className="fixed inset-0 z-0 pointer-events-none">
+  <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-[#030303] z-[1]" />
+</div>
       <main className="max-w-7xl mx-auto relative z-10 pt-44 pb-32 px-6">
         
         {/* HEADER */}
         <div className="text-center mb-20 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-brandRed/20 border border-brandRed/30 rounded-full mb-2 backdrop-blur-md">
-            <Zap size={12} className="text-brandRed" fill="currentColor" />
+<div className="inline-flex items-center gap-2 px-3 py-1 bg-brandRed/20 border border-brandRed/30 rounded-full mb-2 backdrop-blur-sm md:backdrop-blur-md">            <Zap size={12} className="text-brandRed" fill="currentColor" />
             <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white">Community Leadership</span>
           </div>
           <h1 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-none drop-shadow-2xl">
@@ -103,8 +112,7 @@ export default function PartnersPage() {
         </div>
 
         {/* SEARCH & FILTERS */}
-        <div className="sticky top-24 z-50 flex flex-col lg:flex-row items-center gap-4 lg:gap-6 mb-32 bg-black/60 backdrop-blur-3xl p-4 lg:p-6 rounded-[32px] border border-white/10 shadow-2xl">
-          <div className="relative flex-1 w-full">
+<div className="sticky top-24 z-50 flex flex-col lg:flex-row items-center gap-4 lg:gap-6 mb-32 bg-black/80 backdrop-blur-sm md:backdrop-blur-3xl p-4 lg:p-6 rounded-[32px] border border-white/10 shadow-2xl">          <div className="relative flex-1 w-full">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
             <input 
               placeholder="SEARCH MEMBERS..." 
@@ -189,10 +197,9 @@ export default function PartnersPage() {
                   {sectionMembers.map((member) => (
                     <Link key={member._id} href={`/partners/${member._id}`}>
                       <motion.div 
-                        whileHover={{ y: -6 }}
+                        whileHover={{ y: isMobile ? 0 : -6 }}
                         transition={{ duration: 0.3 }}
-                        className="group relative bg-black/40 border border-white/10 rounded-[60px] p-10 backdrop-blur-xl hover:border-brandRed/40 transition-all flex flex-col items-center text-center shadow-[0_30px_60px_rgba(0,0,0,0.8)] will-change-transform"
-                      >
+className="group relative bg-black/40 border border-white/10 rounded-[60px] p-10 backdrop-blur-sm md:backdrop-blur-xl hover:border-brandRed/40 transition-all flex flex-col items-center text-center shadow-[0_30px_60px_rgba(0,0,0,0.8)] will-change-transform"                      >
                         <div className="relative w-44 h-44 md:w-48 md:h-48 rounded-full mb-8 p-1.5 border-2 border-white/10 group-hover:border-brandRed transition-all duration-500 shadow-2xl">
                           <div className="w-full h-full rounded-full overflow-hidden relative shadow-inner">
                             <Image 
@@ -200,8 +207,7 @@ export default function PartnersPage() {
                               alt={member.name} 
                               fill
                               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                              className="object-cover transition-transform duration-700 group-hover:scale-110 saturate-[1.1]" 
-                            />
+className="object-cover transition-transform duration-700 md:group-hover:scale-110 saturate-[1.1]"                            />
                           </div>
                         </div>
 

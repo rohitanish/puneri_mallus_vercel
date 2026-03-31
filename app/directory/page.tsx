@@ -26,6 +26,17 @@ const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+const shimmer = (w: number, h: number) => `
+<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#111"/>
+</svg>`;
+
+const toBase64 = (str: string) =>
+  typeof window === 'undefined'
+    ? Buffer.from(str).toString('base64')
+    : window.btoa(str);
+
+const blurPlaceholder = `data:image/svg+xml;base64,${toBase64(shimmer(700, 475))}`;
 
 export default function MalluMartPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -117,16 +128,27 @@ export default function MalluMartPage() {
         onCancel={() => {setConfirmOpen(false); setItemToDelete(null);}}
       />
 
-      <motion.div style={{ y }} className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-[#030303]">
-        <Image src="/events/mmart.png" alt="BG" fill sizes="100vw" priority className="object-cover opacity-[0.3] brightness-[0.8] scale-110" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#030303] via-transparent to-[#030303] z-[1]" />
-      </motion.div>
+      <div
+  className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
+  style={{
+    backgroundImage: 'url(/events/mmart.png)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    opacity: 0.3,
+    filter: 'brightness(0.8)',
+    transform: 'translateZ(0)',
+    willChange: 'transform',
+  }}
+/>
+<div className="fixed inset-0 z-0 pointer-events-none">
+  <div className="absolute inset-0 bg-gradient-to-b from-[#030303] via-transparent to-[#030303] z-[1]" />
+</div>
 
       <div className="max-w-7xl mx-auto relative z-10 pt-32 md:pt-64 pb-20 px-6">
         
         <div className="flex flex-col md:flex-row justify-between items-start mb-16 gap-8">
           <div className="space-y-6 max-w-2xl">
-            <div className="inline-flex items-center gap-3 px-5 py-2 bg-zinc-950/60 backdrop-blur-xl border border-white/10 rounded-full">
+            <div className="inline-flex items-center gap-3 px-5 py-2 bg-zinc-950/60 backdrop-blur-sm md:backdrop-blur-xl border border-white/10 rounded-full">
               <Zap size={14} className="text-brandRed" />
               <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Business Network</span>
             </div>
@@ -142,13 +164,13 @@ export default function MalluMartPage() {
 
           <Link href="/directory/list" className="w-full md:w-auto">
             <button className="group w-full flex items-center justify-center gap-3 bg-white text-black px-8 py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest hover:bg-brandRed hover:text-white transition-all shadow-2xl active:scale-95">
-              <Briefcase size={20} strokeWidth={2.5} className="group-hover:scale-110 transition-transform" /> 
+              <Briefcase size={20} strokeWidth={2.5} className="md:group-hover:scale-110 transition-transform" /> 
               List Business / Profession
             </button>
           </Link>
         </div>
 
-        <div className="mb-20 grid grid-cols-1 md:grid-cols-2 gap-6 bg-zinc-950/40 p-6 rounded-[32px] border border-white/10 backdrop-blur-xl">
+        <div className="mb-20 grid grid-cols-1 md:grid-cols-2 gap-6 bg-zinc-950/40 p-6 rounded-[32px] border border-white/10 backdrop-blur-sm md:backdrop-blur-xl">
           <div className="relative group">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-brandRed transition-colors" size={18} />
             <input 
@@ -180,14 +202,14 @@ export default function MalluMartPage() {
         {filteredItems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-32">
             {filteredItems.map((item) => (
-              <div key={item._id} className={`group relative bg-zinc-950/30 border rounded-[40px] overflow-hidden transition-all duration-500 shadow-2xl backdrop-blur-2xl ${item.isPremium ? 'border-brandRed/60 shadow-[0_0_40px_rgba(255,0,0,0.15)]' : 'border-white/5 hover:border-brandRed/30'}`}>
+              <div key={item._id} className={`group relative bg-zinc-950/30 border rounded-[40px] overflow-hidden transition-all duration-500 shadow-2xl backdrop-blur-sm md:backdrop-blur-2xl ${item.isPremium ? 'border-brandRed/60 shadow-[0_0_40px_rgba(255,0,0,0.15)]' : 'border-white/5 hover:border-brandRed/30'}`}>
                 
                 {user?.email === item.userEmail && (
                   <div className="absolute top-6 left-6 z-[40] flex gap-2">
-                    <Link href={`/directory/list?edit=${item._id}`} className="p-3 bg-black/60 backdrop-blur-md text-white hover:text-brandRed rounded-xl border border-white/10 transition-all shadow-xl">
+                    <Link href={`/directory/list?edit=${item._id}`} className="p-3 bg-black/60 backdrop-blur-sm md:backdrop-blur-md text-white hover:text-brandRed rounded-xl border border-white/10 transition-all shadow-xl">
                       <Edit3 size={16} />
                     </Link>
-                    <button onClick={() => { setItemToDelete(item); setConfirmOpen(true); }} className="p-3 bg-black/60 backdrop-blur-md text-zinc-400 hover:text-brandRed rounded-xl border border-white/10 transition-all shadow-xl">
+                    <button onClick={() => { setItemToDelete(item); setConfirmOpen(true); }} className="p-3 bg-black/60 backdrop-blur-sm md:backdrop-blur-md text-zinc-400 hover:text-brandRed rounded-xl border border-white/10 transition-all shadow-xl">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -203,7 +225,8 @@ export default function MalluMartPage() {
                 <Link href={`/directory/${item._id}`} className="block relative w-full h-64 overflow-hidden cursor-pointer">
                   <Image 
                     src={(item.imagePaths && item.imagePaths[0]) ? `https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${item.imagePaths[0]}` : (item.imagePath ? `https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${item.imagePath}` : "/about/placeholder.jpeg")} 
-                    alt={item.name} fill sizes="100vw" className="object-cover group-hover:scale-110 transition-all duration-1000"
+                    alt={item.name} fill placeholder="blur"
+  blurDataURL={blurPlaceholder}  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover md:group-hover:scale-110 transition-all duration-1000"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
                   <div className="absolute bottom-6 right-6 bg-zinc-950/80 px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-1.5">
@@ -235,7 +258,7 @@ export default function MalluMartPage() {
             ))}
           </div>
         ) : (
-          <div className="h-96 flex flex-col items-center justify-center border border-white/5 rounded-[40px] bg-zinc-950/20 mb-32 backdrop-blur-md">
+          <div className="h-96 flex flex-col items-center justify-center border border-white/5 rounded-[40px] bg-zinc-950/20 mb-32 backdrop-blur-sm md:backdrop-blur-md">
             <Search size={40} className="text-zinc-800 mb-4" />
             <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[10px]">No partners found</p>
           </div>

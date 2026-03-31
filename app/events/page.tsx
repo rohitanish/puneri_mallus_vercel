@@ -143,9 +143,18 @@ useEffect(() => {
                         className={`relative flex-1 py-2.5 text-[9px] font-black uppercase tracking-widest transition-colors z-10 ${activeFilter === f.id ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
                     >
                         {f.label}
-                        {activeFilter === f.id && (
-                            <motion.div layoutId="activeTab" className="absolute inset-0 bg-brandRed rounded-lg -z-10 shadow-[0_0_15px_rgba(255,0,0,0.3)]" transition={{ type: "spring", bounce: 0.1, duration: 0.6 }} />
-                        )}
+                        <AnimatePresence>
+  {activeFilter === f.id && (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.2 }}
+      className="absolute inset-0 bg-brandRed rounded-lg -z-10 shadow-[0_0_15px_rgba(255,0,0,0.3)]"
+    />
+  )}
+</AnimatePresence>
+
                     </button>
                 ))}
             </div>
