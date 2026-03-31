@@ -9,9 +9,9 @@ import {
 } from 'lucide-react';
 
 const FILTERS = [
-    { id: 'ALL', label: 'All Records' },
-    { id: 'UPCOMING', label: 'Upcoming Pulse' },
-    { id: 'PAST', label: 'Archive' }
+    { id: 'ALL', label: 'All Events' },
+    { id: 'UPCOMING', label: 'Upcoming Event' },
+    { id: 'PAST', label: 'Past Events' }
 ];
 const shimmer = (w: number, h: number) => `
 <svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
@@ -32,7 +32,13 @@ export default function EventsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { scrollY } = useScroll();
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const [isMobile, setIsMobile] = useState(false);
+useEffect(() => {
+  const check = () => setIsMobile(window.innerWidth < 768);
+  check();
+  window.addEventListener('resize', check);
+  return () => window.removeEventListener('resize', check);
+}, []);
   const y = useTransform(scrollY, [0, 500], isMobile ? [0, 0] : [0, 150]);
   useEffect(() => {
     // Only allow auto-play if screen is larger than 1024px (Desktop)
@@ -152,14 +158,17 @@ export default function EventsPage() {
 
               return (
                 <motion.div layout key={item._id}
-                  initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                  
+  initial={{ opacity: 0 }} 
+  animate={{ opacity: 1 }} 
+  exit={{ opacity: 0 }}
                   className="group relative bg-zinc-950/30 border border-white/5 rounded-[40px] overflow-hidden transition-all duration-500 hover:border-brandRed/30 shadow-xl backdrop-blur-2xl h-fit"
                 >
                   <div className="relative w-full h-56 overflow-hidden">
                     <Image 
                       src={item.image || "/about/placeholder.jpeg"} 
                       alt={item.title} fill  
-                      blurDataURL={blurPlaceholder}
+                      blurDataURL={blurPlaceholder} placeholder="blur"
                       // ADD THIS:
     // Mobile: 100% width, Tablet: 50% width, Desktop: 33% width
     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
