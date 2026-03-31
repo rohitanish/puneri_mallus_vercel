@@ -45,7 +45,7 @@ const LaserDivider = () => (
   <div className="relative w-full h-px flex items-center justify-center overflow-visible my-32">
     <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-brandRed/40 to-transparent" />
     <div className="absolute w-[45%] h-[2px] bg-brandRed shadow-[0_0_20px_#FF0000] z-10" />
-    <div className="absolute w-full h-[100px] bg-brandRed/5 blur-[80px] opacity-50 pointer-events-none" />
+    
   </div>
 );
 
@@ -65,8 +65,8 @@ export default function AboutPage() {
       try {
         // Parallel Fetching for maximum performance
         const [galleryRes, teamRes] = await Promise.all([
-          fetch(`/api/settings/gallery?t=${timestamp}`),
-          fetch(`/api/team?t=${timestamp}`)
+          fetch('/api/settings/gallery'),
+          fetch('/api/team')
         ]);
 
         // 1. Process Gallery Data
@@ -144,25 +144,22 @@ useEffect(() => {
     <main className="min-h-screen bg-[#030303] text-white pt-40 pb-20 px-6 relative selection:bg-brandRed/30">
       
       {/* 1. FIXED BRANDED BACKGROUND (UPDATED OPACITY FOR VISIBILITY) */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <Image 
-          src="/events/about5.png" 
-          alt="About Background"
-          fill
-          className="object-cover object-center opacity-40 brightness-[0.7] saturate-[0.9]"
-          blurDataURL={blurPlaceholder}
-          priority
-        />
-        {/* ATMOSPHERIC OVERLAYS */}
-        <div className="absolute inset-0 bg-gradient-radial from-transparent via-[#030303]/30 to-[#030303]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303]" />
-        
-        {/* Subtle Brand Glows */}
-        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-brandRed/10 blur-[150px] rounded-full opacity-30" />
-        
-        {/* Filmic Grain */}
-        <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
-      </div>
+      <div
+  className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
+  style={{
+    backgroundImage: 'url(/events/about5.png)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    opacity: 0.4,
+    transform: 'translateZ(0)',
+    willChange: 'transform',
+  }}
+/>
+<div className="fixed inset-0 z-0 pointer-events-none">
+  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303]" />
+  <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-brandRed/10 blur-[150px] rounded-full opacity-30" />
+  <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
+</div>
 
       <div className="relative z-10">
        {/* 1. HERO: THE ORIGIN STORY */}
@@ -172,7 +169,7 @@ useEffect(() => {
   src="/about/community.jpeg" 
   alt="Community" 
   fill 
-  blurDataURL={blurPlaceholder}
+  blurDataURL={blurPlaceholder} placeholder="blur"
   // Tells the browser: "Use full screen width on mobile, half on desktop."
   sizes="(max-width: 768px) 100vw, 50vw" 
   className="object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-105" 
@@ -245,8 +242,7 @@ useEffect(() => {
 
         {/* 2. AGAM: FLAGSHIP PROGRAM */}
         <section className="max-w-7xl mx-auto mb-40">
-          <div className="relative p-12 lg:p-24 rounded-[80px] bg-zinc-950/40 border border-brandRed/20 backdrop-blur-3xl overflow-hidden group">
-            <div className="flex flex-col lg:flex-row gap-20 items-center">
+<div className="relative p-12 lg:p-24 rounded-[80px] bg-zinc-950/80 md:bg-zinc-950/40 border border-brandRed/20 md:backdrop-blur-3xl overflow-hidden group">            <div className="flex flex-col lg:flex-row gap-20 items-center">
               <div className="w-full lg:w-2/5 space-y-8 order-2 lg:order-1">
                 <div className="flex items-center gap-3">
                    <Zap size={18} className="text-brandRed fill-brandRed" />
@@ -263,7 +259,7 @@ useEffect(() => {
   src="/about/agams.jpg" 
   alt="Agam" 
   fill 
-  blurDataURL={blurPlaceholder}
+  blurDataURL={blurPlaceholder} placeholder="blur"
   // Optimized for a responsive grid: Full width on mobile, 1/2 on tablet, 1/3 on desktop
   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
   className="object-cover group-hover:scale-110 transition-transform duration-1000" 
@@ -283,14 +279,14 @@ useEffect(() => {
   src="/about/image_1.jpeg" 
   alt="Jamming" 
   fill 
-  blurDataURL={blurPlaceholder}
+  blurDataURL={blurPlaceholder} placeholder="blur"
   // Tells the browser to load a 100% width version for mobile and 50% for desktop
   sizes="(max-width: 768px) 100vw, 50vw" 
   className={`object-cover transition-opacity duration-500 ease-in-out ${cycle ? 'opacity-0' : 'opacity-80'}`} 
   priority
 />
               <video 
-                autoPlay loop muted playsInline preload="auto"
+                autoPlay loop muted playsInline preload="none"
                 className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${cycle ? 'opacity-80' : 'opacity-0'}`}
               >
                 <source src="/videos/jam.mp4" type="video/mp4" />
@@ -350,7 +346,7 @@ useEffect(() => {
   src="/about/beauty.jpeg" 
   alt="Pageant" 
   fill 
-  blurDataURL={blurPlaceholder}
+  blurDataURL={blurPlaceholder} placeholder="blur"
   // Tells the browser: "On mobile, use full screen width. On desktop, use half."
   // This drastically reduces the file size for phone users.
   sizes="(max-width: 768px) 100vw, 50vw" 
@@ -384,12 +380,11 @@ useEffect(() => {
                 <div key={idx} className="group w-full max-w-[280px]">
                   
                   {/* Portrait Container: Scales corner radius for mobile vs desktop */}
-                  <div className="relative aspect-[3/4] rounded-2xl md:rounded-[40px] overflow-hidden border border-white/5 mb-3 md:mb-6 bg-zinc-950 shadow-2xl transition-all duration-500 group-hover:border-brandRed/50 group-hover:scale-[1.02]">
-                    <Image 
+                    <div className="relative aspect-[3/4] rounded-2xl md:rounded-[40px] overflow-hidden border border-white/5 mb-3 md:mb-6 bg-zinc-950 shadow-2xl transition-all duration-500 group-hover:border-brandRed/50 md:group-hover:scale-[1.02]">                    <Image 
                       src={member.image} 
                       alt={member.name} 
                       fill
-                      blurDataURL={blurPlaceholder}
+                      blurDataURL={blurPlaceholder} placeholder="blur"
                       sizes="(max-width: 768px) 50vw, 33vw"
                       className="object-cover transition-all duration-700 brightness-[0.9] group-hover:brightness-110 saturate-[1.1]" 
                     />
@@ -447,9 +442,9 @@ useEffect(() => {
             src={src} 
             alt={`Archive Legacy ${idx + 1}`} 
             fill 
-            blurDataURL={blurPlaceholder}
+            blurDataURL={blurPlaceholder} placeholder="blur"
             sizes="(max-width: 768px) 50vw, 33vw"
-            className="object-cover transition-all duration-700 grayscale group-hover:grayscale-0 group-hover:scale-110" 
+            className="object-cover transition-all duration-700 grayscale md:group-hover:grayscale-0 md:group-hover:scale-110" 
             loading="lazy"  
           />
           <div className="absolute inset-0 bg-brandRed/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
@@ -486,7 +481,7 @@ useEffect(() => {
           fill 
           unoptimized 
           className="object-contain" 
-          blurDataURL={blurPlaceholder}
+          blurDataURL={blurPlaceholder} placeholder="blur"
         />
       </motion.div>
       {/* Close Button */}
