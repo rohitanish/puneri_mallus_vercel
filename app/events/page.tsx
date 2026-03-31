@@ -13,7 +13,16 @@ const FILTERS = [
     { id: 'UPCOMING', label: 'Upcoming Pulse' },
     { id: 'PAST', label: 'Archive' }
 ];
+const shimmer = (w: number, h: number) => `
+<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#111"/>
+</svg>`;
 
+const toBase64 = (str: string) =>
+  typeof window === 'undefined'
+    ? Buffer.from(str).toString('base64')
+    : window.btoa(str);
+export const blurPlaceholder = `data:image/svg+xml;base64,${toBase64(shimmer(700, 475))}`;
 export default function EventsPage() {
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
@@ -23,8 +32,8 @@ export default function EventsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { scrollY } = useScroll();
-  const y = useTransform(scrollY, [0, 500], [0, 150]);
-
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const y = useTransform(scrollY, [0, 500], isMobile ? [0, 0] : [0, 150]);
   useEffect(() => {
     // Only allow auto-play if screen is larger than 1024px (Desktop)
     if (window.innerWidth > 1024) {
@@ -98,6 +107,7 @@ export default function EventsPage() {
     priority 
     // ADD THIS:
     sizes="100vw"
+    blurDataURL={blurPlaceholder}
   />        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303] z-[1]" />
       </motion.div>
 
@@ -148,7 +158,8 @@ export default function EventsPage() {
                   <div className="relative w-full h-56 overflow-hidden">
                     <Image 
                       src={item.image || "/about/placeholder.jpeg"} 
-                      alt={item.title} fill unoptimized 
+                      alt={item.title} fill  
+                      blurDataURL={blurPlaceholder}
                       // ADD THIS:
     // Mobile: 100% width, Tablet: 50% width, Desktop: 33% width
     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

@@ -8,12 +8,20 @@ import {
   ExternalLink, Share2, 
   Zap, Loader2, ArrowLeft, Briefcase, Phone
 } from 'lucide-react';
-
+import TribeAlert from '@/components/TribeAlert';
 export default function MemberDetailsPage() {
   const { id } = useParams();
   const [item, setItem] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [alert, setAlert] = useState<{
+  message: string;
+  type: 'success' | 'error' | 'info';
+  isVisible: boolean;
+}>({ message: '', type: 'success', isVisible: false });
 
+const showAlert = (message: string, type: 'success' | 'error' | 'info') => {
+  setAlert({ message, type, isVisible: true });
+};
   useEffect(() => {
     async function fetchDetails() {
       try {
@@ -41,7 +49,7 @@ export default function MemberDetailsPage() {
     <div className="min-h-screen bg-[#030303] text-zinc-100 relative overflow-x-hidden selection:bg-brandRed/30">
       
       <div className="fixed inset-0 z-0 pointer-events-none bg-black">
-        <Image src="/events/partner_3.png" alt="BG" fill priority className="object-cover opacity-[0.50] brightness-[0.7]" />
+        <Image src="/events/partner_3.png" alt="BG"  sizes="100vw" fill priority className="object-cover opacity-[0.50] brightness-[0.7]" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#030303] via-transparent to-[#030303]" />
       </div>
 
@@ -55,11 +63,26 @@ export default function MemberDetailsPage() {
           
           <div className="lg:col-span-4 space-y-6">
             <div className="relative aspect-[4/5] rounded-[40px] overflow-hidden border border-white/10 bg-zinc-900 shadow-2xl group">
-              <Image src={item.image} alt={item.name} fill unoptimized className="object-cover transition-transform duration-700 group-hover:scale-105" />
+              <Image src={item.image} alt={item.name} fill
+  sizes="(max-width: 1024px) 100vw, 33vw"  className="object-cover transition-transform duration-700 group-hover:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <button onClick={() => navigator.share({title: item.name, url: window.location.href})} className="absolute top-4 right-4 p-3 bg-black/60 backdrop-blur-md rounded-full text-white hover:bg-brandRed transition-all z-20">
-                <Share2 size={16} />
-              </button>
+              <button 
+  onClick={async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: item.name, url: window.location.href });
+      } catch (err) {
+        // user cancelled share — do nothing
+      }
+    } else {
+      await navigator.clipboard.writeText(window.location.href);
+      showAlert('Link copied to clipboard!', 'success');
+    }
+  }}
+  className="absolute top-4 right-4 p-3 bg-black/60 backdrop-blur-md rounded-full text-white hover:bg-brandRed transition-all z-20"
+>
+  <Share2 size={16} />
+</button>
             </div>
 
             <div className="bg-black/40 border border-white/10 p-8 rounded-[40px] space-y-6 backdrop-blur-xl">
@@ -135,6 +158,12 @@ export default function MemberDetailsPage() {
           </div>
         </div>
       </main>
+      <TribeAlert
+  message={alert.message}
+  type={alert.type}
+  isVisible={alert.isVisible}
+  onClose={() => setAlert(prev => ({ ...prev, isVisible: false }))}
+/>
     </div>
   );
 }

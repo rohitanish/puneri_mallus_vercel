@@ -1,25 +1,25 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState,useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 
 export default function Preloader() {
   const [loading, setLoading] = useState(true);
   const [percent, setPercent] = useState(0);
-
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
-    const interval = setInterval(() => {
-      setPercent((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => setLoading(false), 800); 
-          return 100;
-        }
-        return prev + Math.floor(Math.random() * 10) + 2; 
-      });
-    }, 80);
-    return () => clearInterval(interval);
-  }, []);
+  intervalRef.current = setInterval(() => {
+    setPercent((prev) => {
+      if (prev >= 100) {
+        clearInterval(intervalRef.current!)
+        setTimeout(() => setLoading(false), 800);
+        return 100;
+      }
+      return Math.min(prev + Math.floor(Math.random() * 10) + 2, 100);
+    });
+  }, 80);
+  return () => clearInterval(intervalRef.current!);
+}, []);
 
   const mantra = ["ONE COMMUNITY", "MANY DREAMS", "ZERO DIVIDE"];
 
@@ -27,8 +27,8 @@ export default function Preloader() {
     <AnimatePresence>
       {loading && (
         <motion.div
-          exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
-          transition={{ duration: 1, ease: [0.7, 0, 0.3, 1] }}
+          exit={{ opacity: 0 }}
+transition={{ duration: 0.6, ease: "easeInOut" }}
           className="fixed inset-0 z-[999] bg-[#030303] flex flex-col items-center justify-center overflow-hidden"
         >
           {/* 1. ATMOSPHERIC FX */}
@@ -46,7 +46,7 @@ export default function Preloader() {
             className="absolute bottom-1/4 -right-20 w-[400px] h-[400px] bg-brandRed/10 blur-[150px] rounded-full" 
           />
 
-          <div className="relative flex flex-col items-center w-full px-10 z-10 space-y-16">
+          <div className="relative flex flex-col items-center w-full px-10 z-10 space-y-8 md:space-y-16">
             
             {/* 2. LOGO: Sharp Animation */}
             <motion.div
@@ -61,7 +61,7 @@ export default function Preloader() {
   height={150} 
   // Added sizes to fix the performance warning and improve mobile loading
   sizes="(max-width: 768px) 200px, 450px"
-  className="h-28 md:h-44 w-auto object-contain drop-shadow-[0_0_40px_rgba(255,0,0,0.3)]"
+  className="h-28 md:h-44 w-auto object-contain drop-shadow-[0_0_20px_rgba(255,0,0,0.15)]"
   priority
 />
             </motion.div>
@@ -122,7 +122,7 @@ export default function Preloader() {
                     {/* Modern dash indicator */}
                     <div className={`h-[1px] transition-all duration-1000 ${isSynced ? 'w-6 bg-brandRed shadow-[0_0_8px_#FF0000]' : 'w-0 bg-zinc-800'}`} />
                     
-                    <p className={`text-[10px] md:text-[12px] font-black uppercase tracking-[0.6em] transition-all duration-700 ${
+                    <p className={`text-[10px] md:text-[12px] font-black uppercase tracking-[0.3em] md:tracking-[0.6em] transition-all duration-700 ${
                       isSynced 
                         ? (text === "ZERO DIVIDE" ? "text-brandRed" : "text-white") 
                         : "text-white/10"
@@ -135,12 +135,7 @@ export default function Preloader() {
             </div>
           </div>
 
-          {/* 5. MINIMAL FOOTER LABEL */}
-          <div className="absolute bottom-12 z-10 text-center opacity-20">
-             <p className="text-[7px] font-black uppercase tracking-[1em] text-white">
-               Tribe Official Interface // 2026
-             </p>
-          </div>
+          
         </motion.div>
       )}
     </AnimatePresence>

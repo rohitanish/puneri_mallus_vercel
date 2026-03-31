@@ -102,6 +102,15 @@ export default function AboutPage() {
   }, []);
 
   useEffect(() => {
+  if (!zoomImage) return
+  const handler = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') setZoomImage(null)
+  }
+  window.addEventListener('keydown', handler)
+  return () => window.removeEventListener('keydown', handler)
+}, [zoomImage])
+
+  useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -118,22 +127,18 @@ export default function AboutPage() {
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCycle((prev) => !prev);
-    }, 4000); 
+  const interval = setInterval(() => setCycle(p => !p), 4000)
+  return () => clearInterval(interval)
+}, []) // runs once, never interrupted
 
-    if (startTypewriter && textIndex < fullText.length) {
-      const timeout = setTimeout(() => {
-        setDisplayText((prev) => prev + fullText[textIndex]);
-        setTextIndex((prev) => prev + 1);
-      }, 60); 
-      return () => {
-        clearInterval(interval);
-        clearTimeout(timeout);
-      };
-    }
-    return () => clearInterval(interval);
-  }, [textIndex, startTypewriter]);
+useEffect(() => {
+  if (!startTypewriter || textIndex >= fullText.length) return
+  const timeout = setTimeout(() => {
+    setDisplayText(p => p + fullText[textIndex])
+    setTextIndex(p => p + 1)
+  }, 60)
+  return () => clearTimeout(timeout)
+}, [textIndex, startTypewriter])
 
   return (
     <main className="min-h-screen bg-[#030303] text-white pt-40 pb-20 px-6 relative selection:bg-brandRed/30">

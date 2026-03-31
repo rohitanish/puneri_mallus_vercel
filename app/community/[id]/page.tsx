@@ -16,26 +16,49 @@ export default function OrganizationDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
-  
+  const [isMobile, setIsMobile] = useState(false);
   const { scrollY } = useScroll();
-  const y = useTransform(scrollY, [0, 500], [0, 150]);
+  const y = useTransform(scrollY, [0, 500], isMobile ? [0, 0] : [0, 150]);
 
   const overviewRef = useRef<HTMLDivElement>(null);
   const photosRef = useRef<HTMLDivElement>(null);
   const servicesRef = useRef<HTMLDivElement>(null);
-
+  const [error, setError] = useState(false);
   useEffect(() => {
     async function fetchDetails() {
       try {
         const res = await fetch(`/api/community?id=${id}`);
         const data = await res.json();
         if (data && !data.error) setItem(data);
-      } catch (err) { console.error(err); } finally { setLoading(false); }
+      } catch (err) { 
+        console.error(err);
+        setError(true); 
+      } finally { 
+        setLoading(false); 
+      }
     }
     fetchDetails();
   }, [id]);
+  
+  useEffect(() => {
+  const check = () => setIsMobile(window.innerWidth < 768);
+  check();
+  window.addEventListener('resize', check);
+  return () => window.removeEventListener('resize', check);
+}, []);
+
 
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-brandRed" size={30} /></div>;
+  if (error) return (
+  <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white">
+    <p className="text-brandRed font-black uppercase tracking-widest text-sm">
+      Failed to load. Please refresh.
+    </p>
+    <Link href="/community" className="mt-4 px-6 py-2 bg-brandRed rounded-full text-xs font-black uppercase">
+      Back to Community
+    </Link>
+  </div>
+);
   if (!item) return <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white"><h1>Node Not Found</h1><Link href="/community" className="mt-4 px-6 py-2 bg-brandRed rounded-full text-xs font-black uppercase">Back to Community</Link></div>;
 
   const allImages = item.imagePaths && item.imagePaths.length > 0 ? item.imagePaths : [item.image];
@@ -50,7 +73,8 @@ export default function OrganizationDetailsPage() {
   const scrollToSection = (ref: any, id: string) => {
     setActiveTab(id);
     const offset = 180;
-    const elementPosition = ref.current?.getBoundingClientRect().top + window.pageYOffset;
+    const elementPosition = ref.current?.getBoundingClientRect().top + window.scrollY;
+
     window.scrollTo({ top: elementPosition - offset, behavior: 'smooth' });
   };
 
@@ -58,9 +82,9 @@ export default function OrganizationDetailsPage() {
     if (item.contact && item.contact.length === 10) return `https://wa.me/91${item.contact}`;
     return item.link || "#";
   };
-
+ 
   return (
-    <div className="min-h-screen bg-[#030303] text-zinc-100 relative overflow-x-hidden selection:bg-brandRed/30">
+    <div className="min-h-screen bg-[#030303] text-zinc-100 relative overflow-hidden selection:bg-brandRed/30">
       
       {/* 1. FIXED BRANDED BACKGROUND */}
       <motion.div style={{ y }} className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-black">
@@ -69,6 +93,7 @@ export default function OrganizationDetailsPage() {
           alt="Atmosphere" 
           fill 
           priority 
+          sizes="100vw"
           className="object-cover opacity-[0.40] brightness-[0.7] scale-110 saturate-[1.2]" 
         />
         {/* Deep gradient for text readability */}
@@ -83,7 +108,7 @@ export default function OrganizationDetailsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 mb-16 items-start">
           
           <div className="lg:col-span-4 relative aspect-square rounded-[40px] overflow-hidden border border-white/10 bg-zinc-900 shadow-2xl group">
-            <Image src={thumbnail || "/about/placeholder.jpeg"} alt={item.title} fill priority unoptimized className="object-cover" />
+            <Image src={thumbnail || "/about/placeholder.jpeg"} alt={item.title} fill priority sizes="100vw"  className="object-cover" />
             <button onClick={() => navigator.share({title: item.title, url: window.location.href})} className="absolute top-4 right-4 p-3 bg-black/60 backdrop-blur-md rounded-full text-white hover:bg-brandRed transition-all z-20">
               <Share2 size={16} />
             </button>
@@ -140,7 +165,7 @@ export default function OrganizationDetailsPage() {
             {tabs.map((tab) => (
               <button key={tab.id} onClick={() => scrollToSection(tab.ref, tab.id)} className={`flex items-center gap-2 whitespace-nowrap text-[10px] font-black uppercase tracking-[0.25em] transition-all relative py-1 ${activeTab === tab.id ? 'text-brandRed' : 'text-zinc-500 hover:text-white'}`}>
                 <tab.icon size={16} /> {tab.label}
-                {activeTab === tab.id && <motion.div layoutId="activeTabUnderline" className="absolute -bottom-5 left-0 right-0 h-0.5 bg-brandRed shadow-[0_0_15px_#FF0000]" />}
+                {activeTab === tab.id && <motion.div layoutId="activeTabUnderline" className="absolute -bottom-[21px] left-0 right-0 h-0.5 bg-brandRed" />}
               </button>
             ))}
           </div>
@@ -195,7 +220,7 @@ export default function OrganizationDetailsPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                 {allImages.map((img: string, idx: number) => (
                   <div key={idx} onClick={() => setZoomImage(img)} className="relative aspect-square rounded-[40px] border border-white/5 cursor-zoom-in group bg-zinc-900 overflow-hidden shadow-2xl">
-                    <Image src={img} alt="Gallery" fill unoptimized className="object-cover opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700" />
+                    <Image src={img} alt="Gallery" fill sizes="100vw" className="object-cover opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <Maximize2 size={24} className="text-white" />
                     </div>
@@ -252,7 +277,7 @@ export default function OrganizationDetailsPage() {
         {zoomImage && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setZoomImage(null)} className="fixed inset-0 z-[1000] bg-black/98 flex items-center justify-center p-8 cursor-zoom-out">
             <div className="relative w-full max-w-5xl h-full flex items-center justify-center">
-              <Image src={zoomImage} alt="Zoomed" fill unoptimized className="object-contain" />
+              <Image src={zoomImage} alt="Zoomed" fill sizes="100vw" className="object-contain" />
             </div>
             <button className="absolute top-8 right-8 text-white p-4 bg-zinc-900/80 rounded-full hover:bg-brandRed transition-all"><X size={28} /></button>
           </motion.div>

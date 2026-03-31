@@ -22,6 +22,10 @@ const LaserDivider = () => (
     <div className="absolute w-[30%] h-[2px] bg-brandRed shadow-[0_0_20px_#FF0000] z-10" />
   </div>
 );
+const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
 export default function MalluMartPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -29,18 +33,21 @@ export default function MalluMartPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [user, setUser] = useState<any>(null);
-
+  const [error, setError] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const [isMobile, setIsMobile] = useState(false);
+  
 
   const { scrollY } = useScroll();
-  const y = useTransform(scrollY, [0, 500], [0, 150]);
+  const y = useTransform(scrollY, [0, 500], isMobile ? [0, 0] : [0, 150]);
 
+  useEffect(() => {
+  const check = () => setIsMobile(window.innerWidth < 768);
+  check();
+  window.addEventListener('resize', check);
+  return () => window.removeEventListener('resize', check);
+}, []); 
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -49,7 +56,7 @@ export default function MalluMartPage() {
         const res = await fetch('/api/mart');
         const data = await res.json();
         setItems(Array.isArray(data) ? data : []);
-      } catch (err) { console.error(err); } finally { setLoading(false); }
+      } catch (err) { console.error(err);setError(true); } finally { setLoading(false); }
     }
     init();
   }, []);
@@ -92,7 +99,13 @@ export default function MalluMartPage() {
       <Loader2 className="animate-spin text-brandRed" size={30} strokeWidth={1} />
     </div>
   );
-
+  if (error) return (
+  <div className="min-h-screen bg-black flex items-center justify-center">
+    <p className="text-brandRed font-black uppercase tracking-widest text-sm">
+      Failed to load. Please refresh.
+    </p>
+  </div>
+);
   return (
     <div className="min-h-screen bg-[#030303] text-white relative selection:bg-brandRed/30 overflow-x-hidden">
       
@@ -105,11 +118,11 @@ export default function MalluMartPage() {
       />
 
       <motion.div style={{ y }} className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-[#030303]">
-        <Image src="/events/mmart.png" alt="BG" fill priority className="object-cover opacity-[0.3] brightness-[0.8] scale-110" />
+        <Image src="/events/mmart.png" alt="BG" fill sizes="100vw" priority className="object-cover opacity-[0.3] brightness-[0.8] scale-110" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#030303] via-transparent to-[#030303] z-[1]" />
       </motion.div>
 
-      <div className="max-w-7xl mx-auto relative z-10 pt-64 pb-20 px-6">
+      <div className="max-w-7xl mx-auto relative z-10 pt-32 md:pt-64 pb-20 px-6">
         
         <div className="flex flex-col md:flex-row justify-between items-start mb-16 gap-8">
           <div className="space-y-6 max-w-2xl">
@@ -190,7 +203,7 @@ export default function MalluMartPage() {
                 <Link href={`/directory/${item._id}`} className="block relative w-full h-64 overflow-hidden cursor-pointer">
                   <Image 
                     src={(item.imagePaths && item.imagePaths[0]) ? `https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${item.imagePaths[0]}` : (item.imagePath ? `https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${item.imagePath}` : "/about/placeholder.jpeg")} 
-                    alt={item.name} fill unoptimized className="object-cover group-hover:scale-110 transition-all duration-1000"
+                    alt={item.name} fill sizes="100vw" className="object-cover group-hover:scale-110 transition-all duration-1000"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
                   <div className="absolute bottom-6 right-6 bg-zinc-950/80 px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-1.5">

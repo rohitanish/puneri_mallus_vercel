@@ -11,6 +11,9 @@ html {
   overflow-x: hidden;
   width: 100%;
   background-color: #000000;
+  /* Smoother scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -19,9 +22,10 @@ body {
   overflow-x: hidden;
   width: 100%;
   min-height: 100vh;
+  /* Prevents layout shifts from scrollbar appearing */
+  scrollbar-gutter: stable;
 }
 
-/* Atmospheric red glow — on a pseudo-element so it never interferes with fixed positioning */
 body::before {
   content: '';
   position: fixed;
@@ -29,13 +33,46 @@ body::before {
   background: radial-gradient(circle at 50% 0%, #220000 0%, #000000 70%);
   z-index: -1;
   pointer-events: none;
+  /* GPU layer for the fixed pseudo-element */
+  transform: translateZ(0);
+  will-change: transform;
 } 
+
+/* Reduce motion for accessibility + perf */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Kill backdrop-blur on mobile — biggest scroll performance win */
+@media (max-width: 768px) {
+  .backdrop-blur-sm,
+  .backdrop-blur,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl,
+  .backdrop-blur-3xl {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
 
 @layer utilities {
   .gpu-boost {
     transform: translateZ(0);
     backface-visibility: hidden;
-    perspective: 1000;
+    perspective: 1000px; /* needs unit — '1000' alone is invalid */
     will-change: transform, opacity;
   }
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

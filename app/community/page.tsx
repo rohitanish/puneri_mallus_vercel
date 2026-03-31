@@ -30,9 +30,9 @@ export default function CommunityPage() {
   const [filterTab, setFilterTab] = useState<"ALL" | "INTERNAL" | "EXTERNAL">("ALL" as any);
   const [userInteracted, setUserInteracted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-
+  const [error, setError] = useState(false);
   const { scrollY } = useScroll();
-  const y = useTransform(scrollY, [0, 500], [0, 150]);
+  const y = useTransform(scrollY, [0, 500], isMobile ? [0, 0] : [0, 150]);
 
   // Handle Mobile Detection
   useEffect(() => {
@@ -49,8 +49,10 @@ export default function CommunityPage() {
         const data = await res.json();
         setCircles(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error("Failed to load circles:", err);
-      } finally {
+  console.error("Failed to load circles:", err);
+  setError(true);  // ← add this
+}
+ finally {
         setLoading(false);
       }
     }
@@ -113,6 +115,13 @@ export default function CommunityPage() {
       <Loader2 className="animate-spin text-brandRed" size={30} strokeWidth={1} />
     </div>
   );
+  if (error) return (
+  <div className="min-h-screen bg-black flex items-center justify-center">
+    <p className="text-brandRed font-black uppercase tracking-widest text-sm">
+      Failed to load. Please refresh.
+    </p>
+  </div>
+);
 
   return (
     <div className="min-h-screen bg-[#030303] text-white relative selection:bg-brandRed/30 overflow-x-hidden">
@@ -212,7 +221,7 @@ export default function CommunityPage() {
         {/* GRID */}
 <AnimatePresence mode="popLayout">
     {filteredCircles.length > 0 ? (
-    <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
         {filteredCircles.map((circle) => (
         <motion.div 
             layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
@@ -222,7 +231,7 @@ export default function CommunityPage() {
             <Link href={`/community/${circle._id}`} className="block relative w-full h-56 overflow-hidden cursor-pointer">
                 <Image 
                     src={circle.image || "/about/placeholder.jpeg"} 
-                    alt={circle.title} fill unoptimized 
+                    alt={circle.title} fill  
                     className="object-cover group-hover:scale-110 transition-all duration-1000"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
@@ -265,7 +274,7 @@ export default function CommunityPage() {
             </div>
         </motion.div>
         ))}
-    </motion.div>
+    </div>
     ) : (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-72 flex flex-col items-center justify-center border border-white/5 rounded-[30px] bg-zinc-950/20 mb-20 backdrop-blur-md">
                 <Search size={30} className="text-zinc-800 mb-3" />

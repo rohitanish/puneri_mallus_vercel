@@ -17,7 +17,7 @@ export default function TribeAlert({ message, type, isVisible, onClose }: TribeA
       return () => clearTimeout(timer);
     }
   }, [isVisible, onClose]);
-
+  
   return (
     <AnimatePresence>
       {isVisible && (

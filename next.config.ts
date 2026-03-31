@@ -20,13 +20,12 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
-      // Added: allow Supabase transform API domain
       {
-        protocol: 'https',
-        hostname: 'bhfrgcphqmbocplfcvbg.supabase.co',
-        port: '',
-        pathname: '/storage/v1/render/image/public/**',
-      },
+    protocol: 'https',
+    hostname: 'cdn.pixabay.com',
+  },
+      // Added: allow Supabase transform API domain
+     
     ],
   },
   skipTrailingSlashRedirect: true, 
