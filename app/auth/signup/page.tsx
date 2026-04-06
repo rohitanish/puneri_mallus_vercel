@@ -180,59 +180,63 @@ export default function SignupPage() {
 };
 
   const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!isPhoneVerified && !DEV_MODE_PHONE) {
-      setMessage("PLEASE VERIFY YOUR PHONE NUMBER FIRST.");
-      return;
-    }
+  if (!isPhoneVerified && !DEV_MODE_PHONE) {
+    setMessage("PLEASE VERIFY YOUR PHONE NUMBER FIRST.");
+    return;
+  }
 
-    if (dob && !isAdult) {
-      setMessage("MEMBERSHIP DENIED: YOU MUST BE 16+ TO JOIN.");
-      return;
-    }
+  if (dob && !isAdult) {
+    setMessage("MEMBERSHIP DENIED: YOU MUST BE 16+ TO JOIN.");
+    return;
+  }
 
-    setLoading(true);
-    setMessage('');
+  setLoading(true);
+  setMessage('');
 
-    const { data: existingPhone } = await supabase
+  try {
+    // 1. UPDATED DUPLICATE CHECK: Reference 'phone_number' column
+    const { data: existingUser, error: checkError } = await supabase
       .from('profiles') 
-      .select('phone')
-      .eq('phone', `+91${phone}`)
-      .single();
+      .select('phone_number')
+      .eq('phone_number', `+91${phone}`)
+      .maybeSingle(); // Returns null if no user found, instead of throwing an error
 
-    if (existingPhone) {
+    if (existingUser) {
       setMessage("PHONE NUMBER ALREADY REGISTERED. PLEASE SIGN IN.");
       setLoading(false);
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    // 2. TRIGGER SUPABASE SIGNUP
+    const { data, error: signupError } = await supabase.auth.signUp({
       email,
       password,
-      phone: `+91${phone}`,
       options: {
         data: { 
-          first_name: firstName.toUpperCase(),
-          last_name: lastName.toUpperCase(),
-          full_name: `${firstName} ${lastName}`.toUpperCase(),
-          profession: profession.toUpperCase(),
+          first_name: firstName.toUpperCase().trim(),
+          last_name: lastName.toUpperCase().trim(),
+          full_name: `${firstName} ${lastName}`.toUpperCase().trim(),
+          profession: profession.toUpperCase().trim(),
           location: location,
           dob: dob,
+          phone: `+91${phone}`, // This key is what the SQL Trigger reads
         },
       },
     });
 
-    if (error) {
-      if (error.message.toLowerCase().includes("16") || error.message.toLowerCase().includes("denied")) {
-        setMessage("MEMBERSHIP DENIED: AGE MUST BE 16 OR OLDER.");
-      } else {
-        setMessage(error.message.toUpperCase());
-      }
+    if (signupError) {
+      console.error("Signup Auth Error:", signupError);
+      setMessage(signupError.message.toUpperCase());
       setLoading(false);
-    } else {
-      if (data.user && data.user.identities && data.user.identities.length === 0) {
-        setMessage("ACCOUNT ALREADY EXISTS. PLEASE SIGN IN INSTEAD.");
+      return;
+    }
+
+    // 3. SUCCESS REDIRECT
+    if (data.user) {
+      if (data.user.identities && data.user.identities.length === 0) {
+        setMessage("EMAIL ALREADY EXISTS. PLEASE SIGN IN.");
         setLoading(false);
         return;
       }
@@ -241,12 +245,16 @@ export default function SignupPage() {
         setMessage('REGISTRATION SUCCESSFUL! ENTERING...');
         setTimeout(() => router.push('/auth/login'), 2500);
       } else {
-        // Supabase handles the SMTP email automatically via Dashboard settings
         setMessage('CHECK YOUR EMAIL TO ACTIVATE YOUR TRIBE ACCOUNT!');
       }
-      setLoading(false);
     }
-  };
+  } catch (err) {
+    console.error("Process Error:", err);
+    setMessage("PROCESS FAILED. CHECK CONSOLE.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6 pt-32 pb-12 relative overflow-hidden">
