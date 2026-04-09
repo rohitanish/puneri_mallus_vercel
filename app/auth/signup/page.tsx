@@ -50,34 +50,38 @@ export default function SignupPage() {
   useEffect(() => {
   let poller: any;
 
-  // 1. The check function that runs every 2 seconds
-  const checkRemoteVerification = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    // If a session exists, it means the user clicked 'Confirm' on their phone
-    if (session) {
-      setMessage("IDENTITY SYNCED. REDIRECTING...");
-      clearInterval(poller); // Stop the heartbeat
+  const checkGlobalRegistration = async () => {
+    if (!phone || phone.length < 10) return;
+
+    // We check the DATABASE, not the local session.
+    // The moment you click 'Confirm' on your phone, your SQL trigger 
+    // creates this profile. The laptop will see it immediately.
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('phone_number', `+91${phone}`)
+      .maybeSingle();
+
+    if (data && !error) {
+      setMessage("IDENTITY DETECTED. SYNCING TRIBE ACCESS...");
+      clearInterval(poller);
       
-      // Delay slightly so the user can read the success message
+      // Redirect to login so the laptop can establish its own session
       setTimeout(() => {
-        router.push('/auth/login'); 
+        router.push('/auth/login');
       }, 2000);
     }
   };
 
-  // 2. Start polling ONLY after the email is sent
-  if (message.includes("CHECK YOUR EMAIL") || message.includes("VERIFICATION EMAIL DISPATCHED")) {
-    // This heartbeat checks Supabase every 2 seconds
-    poller = setInterval(checkRemoteVerification, 2000);
+  // Start polling only when waiting for the email link click
+  if (message.includes("EMAIL") || message.includes("DISPATCHED") || message.includes("STANDBY")) {
+    poller = setInterval(checkGlobalRegistration, 2500);
   }
 
-  // 3. Cleanup to prevent memory leaks
   return () => {
     if (poller) clearInterval(poller);
   };
-}, [message, supabase, router]);
-
+}, [message, phone, supabase, router]);
   const PUNE_AREAS = ["Akurdi", "Aundh", "Balewadi", "Baner", "Bavdhan", "Bhosari", "Bibwewadi", "Camp", "Chikhali", "Chinchwad", "Dapodi", "Deccan", "Dhanori", "Erandwane", "Fatima Nagar", "Ghorpadi", "Hadapsar", "Hinjewadi", "Kalyani Nagar", "Karve Nagar", "Kasarwadi", "Katraj", "Khadki", "Kondhwa", "Koregaon Park", "Kothrud", "Lohegaon", "Magarpatta", "Model Colony", "Moshi", "Mundhwa", "NIBM", "Nigdi", "Pashan", "Phugewadi", "Pimpri", "Pimple Gurav", "Pimple Nilakh", "Pimple Saudagar", "Pune", "Punawale", "Rahatani", "Ravet", "Sadashiv Peth", "Sahakar Nagar", "Sangvi", "Shivajinagar", "Sinhagad Road", "Sus", "Swargate", "Talawade", "Tathawade", "Thergaon", "Undri", "Viman Nagar", "Vishrantwadi", "Wakad", "Wanowrie", "Warje", "Yerwada"].sort();
 
   const isPhoneValid = useMemo(() => phone.length === 10, [phone]);
