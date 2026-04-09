@@ -6,7 +6,7 @@ export default function PrivacyPage() {
   const sections = [
     {
       title: "Data Transmission",
-      content: "We collect minimal identification data including email and name during Tribe registration to initialize community nodes. Your data is encrypted and stored via Supabase secure protocols."
+      content: "We collect minimal identification data including email and name during Tribe registration to initialize community pages. Your data is encrypted and stored via Supabase secure protocols."
     },
     {
       title: "Visual Assets",

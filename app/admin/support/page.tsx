@@ -96,7 +96,7 @@ export default function SupportTerminal() {
               <input 
                 value={searchQuery} 
                 onChange={e => setSearchQuery(e.target.value)} 
-                placeholder="SEARCH NODES..." 
+                placeholder="SEARCH TICKET..." 
                 className="w-full bg-zinc-950 border border-white/5 p-3 pl-11 rounded-full text-[10px] font-bold uppercase tracking-widest focus:border-brandRed outline-none" 
               />
             </div>

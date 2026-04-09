@@ -6,7 +6,7 @@ export default function TermsPage() {
   const terms = [
     {
       title: "Community Conduct",
-      content: "Tribe members must maintain the spirit of 'Zero Divides'. Any injection of hate speech, political friction, or harassment will result in immediate node termination."
+      content: "Tribe members must maintain the spirit of 'Zero Divides'. Any injection of hate speech, political friction, or harassment will result in immediate  termination."
     },
     {
       title: "Asset Ownership",

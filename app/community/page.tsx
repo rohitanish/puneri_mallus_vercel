@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { 
   ArrowUpRight, Users, Zap, Flame, Loader2, Search, 
-  MapPin, ShieldCheck, MessageCircle, ChevronDown, Filter
+  MapPin, ShieldCheck, MessageCircle, ChevronDown, Filter,Plus
 } from 'lucide-react';
 
 const EXTERNAL_CATEGORIES = ["SAMAJAM", "TEMPLE", "CHURCH", "ORGANIZATION"];
@@ -102,13 +102,16 @@ export default function CommunityPage() {
 
   const dropdownCategories = useMemo(() => {
     const subset = circles.filter(c => {
+        // IMPORTANT: Ensure we only extract categories from approved nodes
+        if (c.isApproved === false) return false; 
+        
         if (filterTab === "INTERNAL") return !isExternal(c.category);
         if (filterTab === "EXTERNAL") return isExternal(c.category);
         return true;
     });
     const cats = subset.map(c => c.category?.toUpperCase() || "TRIBE");
     return ["ALL", ...Array.from(new Set(cats)).sort()];
-  }, [circles, filterTab]);
+  }, [circles, filterTab]); 
 
   if (loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
@@ -130,7 +133,11 @@ export default function CommunityPage() {
         <Image 
           src="/events/comm_2.png" 
           alt="Atmosphere" fill priority
-          className="object-cover opacity-[0.50] brightness-[0.8] scale-110 saturate-150" 
+          className="object-cover opacity-[0.50] brightness-[0.8] scale-110 saturate-150"
+          onError={(e) => {
+        const target = e.target as HTMLImageElement;
+        target.src = "/about/placeholder.jpeg";
+    }} 
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#030303]/60 via-transparent to-[#030303] z-[1]" />
       </motion.div>
@@ -168,6 +175,18 @@ export default function CommunityPage() {
             </Link>
           </div>
         </div>
+
+        <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6 bg-zinc-900/20 p-6 rounded-[30px] border border-white/5 backdrop-blur-sm">
+  <div className="text-left space-y-1">
+    <h3 className="text-xl font-black italic uppercase tracking-tighter">Represent an <span className="text-brandRed">Organization?</span></h3>
+    <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">Add your Samajam, Temple, or Local Group to the grid.</p>
+  </div>
+  <Link href="/community/add" className="w-full md:w-auto">
+    <button className="w-full md:w-auto flex items-center justify-center gap-3 bg-white text-black px-8 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-brandRed hover:text-white transition-all shadow-xl active:scale-95">
+      <Plus size={16} strokeWidth={3} /> Add Organization
+    </button>
+  </Link>
+</div>
 
         {/* FILTERS */}
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-10">
@@ -237,6 +256,10 @@ export default function CommunityPage() {
                     src={circle.image || "/about/placeholder.jpeg"} 
                     alt={circle.title} fill  
                     className="object-cover group-hover:scale-110 transition-all duration-1000"
+                    onError={(e) => {
+        const target = e.target as HTMLImageElement;
+        target.src = "/about/placeholder.jpeg";
+    }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
                 

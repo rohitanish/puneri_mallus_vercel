@@ -45,8 +45,13 @@ function LazyVideo({ src, className }: { src: string; className?: string }) {
 
 // FIX 4: Transform Supabase image URLs to use WebP + resize
 const transformSupabaseUrl = (url: string, width: number) => {
-  if (!url?.includes('supabase')) return url;
-  return `${url}?width=${width}&quality=80&format=webp`;
+  if (!url || !url.includes('supabase')) return url;
+  
+  // Use the 'render' endpoint for Pro Tier transformations
+  const transformedPath = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+  
+  // We force format=webp and use the width passed from the component
+  return `${transformedPath}?width=${width}&quality=75&format=webp`;
 };
 
 export default function Home() {
@@ -71,6 +76,7 @@ export default function Home() {
           setSlides(sliderData.slides);
         }
 
+        // 1. Filter Events exactly like the Events page logic
         const upcomingNodes = allEvents
           .filter((e: any) => e.isUpcoming === true && e.featured === true)
           .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -78,12 +84,14 @@ export default function Home() {
         const pastFeatured = allEvents
           .filter((e: any) => e.isUpcoming === false && e.featured === true);
 
-        // FIX 4: Transform Supabase URLs before passing to EventCard
+        // 2. STABLE FORMATTING (Matches Events Page)
+        // We REMOVE the transformSupabaseUrl here because it's causing 400 errors 
+        // with the posters subfolder. We let the EventCard handle the display.
         const format = (list: any[]) => list.map(e => ({ 
           ...e, 
           id: e._id || e.id,
-          image: transformSupabaseUrl(e.image, 600),
-          thumbnail: transformSupabaseUrl(e.thumbnail, 400),
+          image: e.image || "/about/placeholder.jpeg", // Fallback to placeholder
+          thumbnail: e.thumbnail || e.image || "/about/placeholder.jpeg",
         }));
 
         setUpcoming(format(upcomingNodes).slice(0, 2));

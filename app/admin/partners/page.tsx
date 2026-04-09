@@ -82,7 +82,7 @@ export default function PartnerAdmin() {
               <ShieldCheck size={12} fill="currentColor" /> Structural Grid Management
             </div>
             <h2 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter">
-              Network <span className="text-brandRed">Nodes .</span>
+              Network <span className="text-brandRed">Partners .</span>
             </h2>
           </div>
           

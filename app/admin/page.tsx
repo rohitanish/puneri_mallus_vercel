@@ -97,7 +97,7 @@ export default function AdminPortal() {
     },
     {
   title: "Mallu Mart",
-  desc: "Audit professional listings, verify businesses, or purge nodes from the mart.",
+  desc: "Audit professional listings, verify businesses, or delete business from the mart.",
   icon: <ShieldCheck className="text-brandRed" size={32} />,
   link: "/admin/mart", // New route
   status: "Live",

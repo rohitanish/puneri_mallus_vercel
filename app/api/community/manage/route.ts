@@ -2,17 +2,17 @@ import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { createClient } from '@supabase/supabase-js';
+import { sendPendingCommunityEmail, sendApprovedCommunityEmail, sendAdminPendingAlert } from '@/lib/mail';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Helper to extract filename from Supabase URL
 const getFileName = (url: string) => {
   if (!url || !url.includes('community/')) return null;
-  const parts = url.split('/');
-  return parts[parts.length - 1].split('?')[0];
+  const parts = url.split('community/')[1]; 
+  return parts.split('?')[0];
 };
 
 export async function POST(req: Request) {
@@ -29,40 +29,46 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
       }
 
-      // 1. Fetch the current node to see what images it has right now
       const oldNode = await db.collection("community_circles").findOne({ 
         _id: new ObjectId(_id) 
       });
 
       if (oldNode) {
-        // 2. Sanitation Logic for Multiple Images
-        // Get all unique URLs from the old record (thumbnail + gallery)
-        const oldImages = new Set([oldNode.image, ...(oldNode.imagePaths || [])].filter(Boolean));
-        
-        // Get all unique URLs from the incoming update
-        const newImages = new Set([body.image, ...(body.imagePaths || [])].filter(Boolean));
+        /**
+         * 🔥 SAFE IMAGE CLEANUP
+         * We only run cleanup if 'image' or 'imagePaths' are present in the request body.
+         * This prevents images from being deleted when just toggling 'isApproved' from the dashboard.
+         */
+        if (body.image || body.imagePaths) {
+          const oldImages = new Set([oldNode.image, ...(oldNode.imagePaths || [])].filter(Boolean));
+          const newImages = new Set([body.image, ...(body.imagePaths || [])].filter(Boolean));
 
-        // Find images that exist in the old set but NOT in the new set
-        const filesToDelete = Array.from(oldImages)
-          .filter(url => !newImages.has(url))
-          .map(url => getFileName(url))
-          .filter(Boolean) as string[];
+          const filesToDelete = Array.from(oldImages)
+            .filter(url => !newImages.has(url))
+            .map(url => getFileName(url))
+            .filter(Boolean) as string[];
 
-        // 3. Purge orphaned files from Supabase Storage
-        if (filesToDelete.length > 0) {
-          try {
-            const { error: purgeError } = await supabaseAdmin.storage
-              .from('community')
-              .remove(filesToDelete);
-            
-            if (purgeError) console.error("SUPABASE_PURGE_ERROR:", purgeError);
-          } catch (err) {
-            console.error("ASSET_CLEANUP_WARNING:", err);
+          if (filesToDelete.length > 0) {
+            try {
+              await supabaseAdmin.storage.from('community').remove(filesToDelete);
+            } catch (err) {
+              console.error("ASSET_CLEANUP_WARNING:", err);
+            }
+          }
+        }
+
+        // EMAIL LOGIC: CHECK FOR APPROVAL (Status change from false to true)
+        if (!oldNode.isApproved && body.isApproved === true) {
+          const submitterEmail = oldNode.submittedBy || body.submittedBy;
+          if (submitterEmail) {
+            const adminIdentifier = body.approvedBy || "Tribe Moderator"; 
+            // Trigger the professional live email
+            await sendApprovedCommunityEmail(submitterEmail, body.title || oldNode.title, adminIdentifier, _id);
           }
         }
       }
 
-      // 4. Update document
+      // Update document
       await db.collection("community_circles").updateOne(
         { _id: new ObjectId(_id) },
         { 
@@ -75,13 +81,29 @@ export async function POST(req: Request) {
       
       return NextResponse.json({ message: "Node successfully updated" });
     } else {
-      // Create logic remains same
+      // NEW SUBMISSION LOGIC
       const result = await db.collection("community_circles").insertOne({
         ...body,
         createdAt: new Date(),
+        updatedAt: new Date(),
+        isApproved: body.isApproved ?? false, 
         isVerified: body.isVerified || false,
         services: body.services || []
       });
+
+      // EMAIL LOGIC: USER NOTIFICATION & ADMIN ALERT
+      if (body.submittedBy && !body.isApproved) {
+        await sendPendingCommunityEmail(body.submittedBy, body.title);
+
+        try {
+          const pendingCount = await db.collection("community_circles").countDocuments({ 
+            isApproved: false 
+          });
+          await sendAdminPendingAlert(body.title, pendingCount);
+        } catch (adminMailErr) {
+          console.error("ADMIN_NOTIFY_ERROR:", adminMailErr);
+        }
+      }
       
       return NextResponse.json(result);
     }

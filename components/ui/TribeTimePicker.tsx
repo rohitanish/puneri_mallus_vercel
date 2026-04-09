@@ -29,9 +29,17 @@ export default function TribeTimePicker({ value, onChange, onClose, anchorRef }:
   const updatePosition = useCallback(() => {
     if (anchorRef.current) {
       const rect = anchorRef.current.getBoundingClientRect();
+      
+      // Calculate height of picker (approx 500px) to see if it should go UP or DOWN
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const shouldShowAbove = spaceBelow < 500; 
+
       setCoords({
-        top: rect.bottom + window.scrollY + 8,
-        left: Math.min(rect.left, window.innerWidth - 320)
+        // If low on screen space, show it above the input
+        top: shouldShowAbove 
+          ? rect.top + window.scrollY - 520 // Offset for picker height
+          : rect.bottom + window.scrollY + 8,
+        left: Math.min(rect.left, window.innerWidth - 340) // Prevent horizontal overflow
       });
     }
   }, [anchorRef]);

@@ -131,7 +131,7 @@ export default function AdminEventsPage() {
       });
       if (res.ok) {
         await logAdminActivity(sanitizedForm.title, isEditingId ? "EVENT_UPDATE" : "EVENT_PUBLISH");
-        showAlert(isEditingId ? "Event Logic Updated" : "New Node Published", "success");
+        showAlert(isEditingId ? "Event Logic Updated" : "New Event Published", "success");
         resetForm();
         fetchFromMongo();
       }

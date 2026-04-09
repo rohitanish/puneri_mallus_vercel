@@ -410,7 +410,7 @@ useEffect(() => {
             ) : (
               <div className="col-span-full py-12 md:py-20 border border-dashed border-white/5 rounded-2xl md:rounded-[40px] w-full">
                 <p className="text-zinc-600 font-black uppercase tracking-[0.2em] md:tracking-[0.4em] text-[8px] md:text-[10px] italic animate-pulse">
-                  Node personnel synchronization in progress...
+                  Team personnel synchronization in progress...
                 </p>
               </div>
             )}

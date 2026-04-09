@@ -8,7 +8,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Helper to extract filename safely
+// Helper to extract filename safely from the 'community' bucket
 const getFileName = (url: string) => {
   if (!url || !url.includes('community/')) return null;
   const parts = url.split('/');
@@ -37,8 +37,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "Node not found" }, { status: 404 });
     }
 
-    // 2. Comprehensive Asset Purge
-    // Collect unique URLs from both 'image' and 'imagePaths' array
+    // 2. Comprehensive Asset Purge from 'community' bucket
     const allAssetUrls = new Set([
       node.image, 
       ...(node.imagePaths || [])
@@ -51,7 +50,7 @@ export async function DELETE(req: Request) {
     if (filesToDelete.length > 0) {
       try {
         const { error: storageError } = await supabaseAdmin.storage
-          .from('community')
+          .from('community') // Using your existing bucket
           .remove(filesToDelete);
 
         if (storageError) {

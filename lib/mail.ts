@@ -28,3 +28,89 @@ export const sendVerificationEmail = async (to: string, token: string) => {
 
   return await transporter.sendMail(mailOptions);
 };
+
+export const sendPendingCommunityEmail = async (to: string, communityName: string) => {
+  const mailOptions = {
+    from: `"Puneri Mallus Tribe" <${process.env.EMAIL_USER}>`,
+    to: to,
+    subject: "We've received your community submission!",
+    html: `
+      <div style="font-family: 'Segoe UI', Helvetica, Arial, sans-serif; max-width: 500px; margin: auto; background: #030303; color: #ffffff; padding: 50px 40px; border-radius: 40px; border: 1px solid #222; text-align: center;">
+        <h2 style="font-weight: 900; text-transform: uppercase; font-size: 24px; margin-bottom: 15px; color: #fff;">Submission <span style="color: #ff0000;">Received</span></h2>
+        
+        <p style="font-size: 16px; color: #aaa; line-height: 1.6; margin-bottom: 30px;">
+          Hi there! Thank you for adding <b style="color: #fff;">${communityName}</b> to our community list.
+        </p>
+        
+        <div style="padding: 20px; background: rgba(255,0,0,0.05); border: 1px solid rgba(255,0,0,0.2); border-radius: 20px; margin-bottom: 30px;">
+          <p style="margin: 0; font-size: 13px; font-weight: bold; color: #ff0000; text-transform: uppercase; letter-spacing: 1px;">Current Status: Pending Review</p>
+        </div>
+
+        <p style="font-size: 14px; color: #666; line-height: 1.6;">
+          Our team is currently checking the details. We will send you another email as soon as it is approved and visible to everyone.
+        </p>
+        
+        <hr style="border: 0; border-top: 1px solid #222; margin: 40px 0;" />
+        <p style="font-size: 11px; color: #444; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Puneri Mallus Tribe Community</p>
+      </div>
+    `,
+  };
+  return await transporter.sendMail(mailOptions);
+};
+
+/**
+ * Sends a friendly email when a community is approved
+ */
+export const sendApprovedCommunityEmail = async (to: string, communityName: string, adminName: string, communityId: string) => {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://puneri-mallus-vercel.vercel.app';
+  const directLink = `${baseUrl}/community/${communityId}`;
+
+  const mailOptions = {
+    from: `"Puneri Mallus Tribe" <${process.env.EMAIL_USER}>`,
+    to: to,
+    subject: "Great news! Your community is now live",
+    html: `
+      <div style="font-family: 'Segoe UI', Helvetica, Arial, sans-serif; max-width: 500px; margin: auto; background: #030303; color: #ffffff; padding: 50px 40px; border-radius: 40px; border: 1px solid #00ffff; text-align: center;">
+        <h2 style="font-weight: 900; text-transform: uppercase; font-size: 24px; margin-bottom: 15px; color: #fff;">Now <span style="color: #00ffff;">Live!</span></h2>
+        
+        <p style="font-size: 16px; color: #aaa; line-height: 1.6; margin-bottom: 30px;">
+          Congratulations! Your community <b style="color: #fff;">${communityName}</b> has been approved and is now visible on our website.
+        </p>
+        
+        <div style="padding: 15px; background: rgba(0,255,255,0.05); border-radius: 20px; margin-bottom: 35px; border: 1px solid rgba(0,255,255,0.1);">
+          <p style="margin: 0; font-size: 12px; color: #fff;">Approved by: <b>${adminName}</b></p>
+        </div>
+
+        <a href="${directLink}" style="display: inline-block; background: #00ffff; color: #000; padding: 18px 40px; border-radius: 50px; text-decoration: none; font-weight: 900; text-transform: uppercase; font-size: 13px; letter-spacing: 1px;">View Community Page</a>
+        
+        <p style="margin-top: 40px; font-size: 12px; color: #555;">
+          Thank you for being a part of the Puneri Mallus Tribe!
+        </p>
+      </div>
+    `,
+  };
+  return await transporter.sendMail(mailOptions);
+};
+
+export const sendAdminPendingAlert = async (communityName: string, pendingCount: number) => {
+  const mailOptions = {
+    from: `"Puneri Mallus Tribe" <${process.env.EMAIL_USER}>`,
+    to: process.env.EMAIL_USER, // Sends to yourself/admin
+    subject: "🚨 Action Required: New Community Pending",
+    html: `
+      <div style="font-family: sans-serif; max-width: 450px; margin: auto; background: #fff; color: #000; padding: 40px; border: 2px solid #ff0000; border-radius: 20px;">
+        <h2 style="color: #ff0000; text-transform: uppercase;">New Submission</h2>
+        <p>A new community <b>${communityName}</b> has been submitted and needs review.</p>
+        
+        <div style="background: #f0f0f0; padding: 20px; border-radius: 15px; margin: 20px 0; text-align: center;">
+          <p style="margin: 0; font-size: 12px; color: #666; text-transform: uppercase;">Total Queue</p>
+          <h1 style="margin: 5px 0; font-size: 48px; color: #000;">${pendingCount}</h1>
+          <p style="margin: 0; font-size: 10px; font-weight: bold; color: #ff0000;">COMMUNITIES AWAITING APPROVAL</p>
+        </div>
+
+        <a href="https://puneri-mallus-vercel.vercel.app/admin/community" style="display: block; background: #000; color: #fff; text-align: center; padding: 15px; border-radius: 10px; text-decoration: none; font-weight: bold;">Open Admin Dashboard</a>
+      </div>
+    `,
+  };
+  return await transporter.sendMail(mailOptions);
+};

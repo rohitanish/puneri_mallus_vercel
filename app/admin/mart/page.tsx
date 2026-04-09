@@ -103,7 +103,7 @@ export default function AdminMartManager() {
               Mart <span className="text-brandRed">Audit .</span>
             </h1>
             <p className="text-zinc-500 font-bold uppercase tracking-[0.3em] text-[10px]">
-              System Overlook // {items.length} Registered Nodes
+              System Overlook // {items.length} Registered Business
             </p>
           </div>
 

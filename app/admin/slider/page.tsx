@@ -135,7 +135,7 @@ export default function SliderAdmin() {
       
       <TribeConfirm 
         isOpen={confirmOpen}
-        title="Purge Slide Node"
+        title="Delete Slide Event"
         message={`Are you sure you want to remove Slot 0${(deleteIdx || 0) + 1} from the cinematic sequence?`}
         onConfirm={executeRemove}
         onCancel={() => setConfirmOpen(false)}
