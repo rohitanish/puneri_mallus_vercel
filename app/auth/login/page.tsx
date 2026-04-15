@@ -64,7 +64,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-black flex items-start justify-center p-6 pt-24 md:pt-32 relative overflow-hidden">
       
       {/* BACKGROUND IMAGE */}
       <div className="absolute inset-0 z-0">
@@ -80,59 +80,61 @@ export default function LoginPage() {
         <div className="absolute top-0 right-0 w-1/2 h-full bg-brandRed/5 blur-[120px] pointer-events-none" />
       </div>
 
-      <div className="w-full max-w-[420px] relative z-10">
-        <div className="relative bg-white/[0.03] backdrop-blur-2xl border border-white/10 px-8 py-10 md:px-10 md:py-12 rounded-[45px] shadow-2xl overflow-hidden text-left">
+      <div className="w-full max-w-[380px] relative z-10">
+        <div className="relative bg-white/[0.03] backdrop-blur-2xl border border-white/10 px-8 py-8 md:px-10 md:py-10 rounded-[32px] shadow-2xl overflow-hidden text-left">
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none" />
 
           {/* IMPACTFUL LOGO */}
-          <div className="flex justify-center mb-8 relative z-10">
+          <div className="flex justify-center mb-6 relative z-10">
             <Link href="/">
               <Image 
                 src="/logo.png" 
                 alt="Logo" 
-                width={500} 
-                height={150} 
-                sizes="(max-width: 768px) 250px, 500px" 
-                className="h-24 md:h-32 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,0,0,0.5)]" 
+                width={400} 
+                height={120} 
+                className="h-16 md:h-20 w-auto object-contain drop-shadow-[0_0_20px_rgba(255,0,0,0.5)]" 
                 priority 
               />
             </Link>
           </div>
 
           <div className="relative z-10">
-            <h2 className="text-2xl font-black uppercase italic tracking-tighter mb-6 text-center text-white">
+            <h2 className="text-xl font-black uppercase italic tracking-tighter mb-6 text-center text-white">
               Welcome <span className="text-brandRed">Back.</span>
             </h2>
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-brandRed transition-colors" size={16} />
+                {/* Fixed Icon Position and Opacity */}
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brandRed transition-colors z-20" size={16} />
                 <input 
                   type="email" 
-                  placeholder="EMAIL" 
+                  placeholder="EMAIL ADDRESS" 
                   required
                   autoComplete="off"
                   suppressHydrationWarning
-                  className="w-full bg-black/40 border border-white/10 p-3.5 pl-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white placeholder:text-white/10"
+                  /* pl-12 clears the icon; placeholder:text-zinc-500 makes it visible */
+                  className="relative w-full bg-black/40 border border-white/10 p-4 pl-12 rounded-xl font-bold text-[10px] tracking-widest focus:border-brandRed transition-all outline-none text-white placeholder:text-zinc-500 z-10"
                   value={email} 
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
 
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-brandRed transition-colors" size={16} />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brandRed transition-colors z-20" size={16} />
                 <input 
                   type={showPassword ? "text" : "password"} 
                   placeholder="PASSWORD" 
                   required
-                  className="w-full bg-black/40 border border-white/10 p-3.5 pl-11 pr-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white placeholder:text-white/10"
+                  /* pl-12 clears the icon; pr-12 clears the eye icon */
+                  className="relative w-full bg-black/40 border border-white/10 p-4 pl-12 pr-12 rounded-xl font-bold text-[10px] tracking-widest focus:border-brandRed transition-all outline-none text-white placeholder:text-zinc-500 z-10"
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-brandRed transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-brandRed transition-colors z-20"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -156,7 +158,7 @@ export default function LoginPage() {
                     transition={{ duration: 0.2, ease: "easeOut" }}
                     className="space-y-3"
                   >
-                    <p className="text-brandRed text-[9px] font-black uppercase tracking-widest text-center py-2 px-4 bg-brandRed/10 border border-brandRed/20 rounded-lg animate-pulse">
+                    <p className="text-brandRed text-[8px] font-black uppercase tracking-widest text-center py-2 px-4 bg-brandRed/10 border border-brandRed/20 rounded-lg animate-pulse">
                       {error}
                     </p>
                     
@@ -183,7 +185,7 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <div className="mt-8 text-center flex flex-col gap-3">
+            <div className="mt-6 text-center flex flex-col gap-2">
               <Link 
                 href="/auth/signup" 
                 className="text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-brandRed transition-colors"

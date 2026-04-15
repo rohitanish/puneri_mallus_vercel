@@ -63,7 +63,7 @@ export default function AdminMartManager() {
       const res = await fetch('/api/mart', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, isApproved: !currentStatus })
+        body: JSON.stringify({ id, isApproved: !currentStatus, auditType: 'APPROVAL' })
       });
       if (res.ok) {
         setItems(items.map(item => item._id === id ? { ...item, isApproved: !currentStatus } : item));

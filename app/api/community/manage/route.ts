@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     const db = client.db("punerimallus");
     const data = await req.json();
 
-    // 🔥 NEW: REORDER LOGIC (Bulk Update)
+    // 🔥 ADDED: REORDER LOGIC (Bulk Update)
     if (data.reorder && Array.isArray(data.newOrder)) {
       const operations = data.newOrder.map((item: any) => ({
         updateOne: {
@@ -34,7 +34,6 @@ export async function POST(req: Request) {
           update: { $set: { order: item.order, updatedAt: new Date() } }
         }
       }));
-
       const result = await db.collection("community_circles").bulkWrite(operations);
       return NextResponse.json({ success: true, message: `Reordered ${result.modifiedCount} nodes` });
     }
@@ -62,7 +61,6 @@ export async function POST(req: Request) {
           body.isApproved = false;
         }
 
-        // Image Cleanup Logic
         if (body.image || body.imagePaths) {
           const oldImages = new Set([oldNode.image, ...(oldNode.imagePaths || [])].filter(Boolean));
           const newImages = new Set([body.image, ...(body.imagePaths || [])].filter(Boolean));
@@ -81,7 +79,7 @@ export async function POST(req: Request) {
           }
         }
 
-        // Approval Notification
+        // EMAIL LOGIC: CHECK FOR APPROVAL
         if (!oldNode.isApproved && body.isApproved === true) {
           const submitterEmail = oldNode.submittedBy || body.submittedBy;
           if (submitterEmail) {
@@ -90,8 +88,16 @@ export async function POST(req: Request) {
           }
         }
 
-        // Draft to Publish Logic
-        if (oldNode.isDraft && body.isDraft === false) {
+        // 🔥 ADDED: RE-APPROVAL & SMART NOTIFICATION LOGIC
+        // Logic: Notify if it's NOT a draft AND it was previously a Draft OR previously Approved
+        const isUserEdit = !body.approvedBy; 
+        const shouldNotify = !body.isDraft && (oldNode.isDraft || oldNode.isApproved);
+
+        if (isUserEdit) {
+           body.isApproved = false; // Force reset on user edits
+        }
+
+        if (shouldNotify && isUserEdit) {
            const submitterEmail = oldNode.submittedBy || body.submittedBy;
            if (submitterEmail) await sendPendingCommunityEmail(submitterEmail, body.title || oldNode.title);
            
@@ -105,6 +111,7 @@ export async function POST(req: Request) {
         { 
           $set: { 
             ...body, 
+            isDraft: body.isDraft ?? false,
             updatedAt: new Date() 
           } 
         }
@@ -118,7 +125,7 @@ export async function POST(req: Request) {
         isDraft: body.isDraft ?? false,
         isApproved: false, 
         isVerified: body.isVerified || false,
-        order: 999, // 🔥 Default high order for new submissions
+        order: 999, // 🔥 ADDED: Default high order
         services: body.services || [],
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -126,8 +133,11 @@ export async function POST(req: Request) {
 
       if (body.submittedBy && !body.isApproved && !body.isDraft) {
         await sendPendingCommunityEmail(body.submittedBy, body.title);
+
         try {
-          const pendingCount = await db.collection("community_circles").countDocuments({ isApproved: false });
+          const pendingCount = await db.collection("community_circles").countDocuments({ 
+            isApproved: false 
+          });
           await sendAdminPendingAlert(body.title, pendingCount);
         } catch (adminMailErr) {
           console.error("ADMIN_NOTIFY_ERROR:", adminMailErr);

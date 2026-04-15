@@ -63,14 +63,20 @@ export default function CommunityAdmin() {
       const res = await fetch('/api/community/manage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _id: circle._id, isApproved: !circle.isApproved })
+        body: JSON.stringify({ 
+          _id: circle._id, 
+          isApproved: !circle.isApproved,
+          // 🔥 ADD THIS: Tells the API an Admin is performing the action
+          approvedBy: "Tribe Moderator" 
+        })
       });
       if (res.ok) {
         setCircles(circles.map(c => c._id === circle._id ? { ...c, isApproved: !c.isApproved } : c));
         showAlert(circle.isApproved ? "Node Hidden" : "Node Approved & Live", "success");
       }
-    } catch (error) { showAlert("Action failed", "error"); }
-    finally { setUpdatingId(null); }
+    } catch (error) { 
+      showAlert("Action failed", "error"); 
+    } finally { setUpdatingId(null); }
   };
 
   const handleReject = async (circle: any) => {

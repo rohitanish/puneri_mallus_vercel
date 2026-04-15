@@ -22,10 +22,12 @@ const LaserDivider = () => (
     <div className="absolute w-[30%] h-[2px] bg-brandRed shadow-[0_0_20px_#FF0000] z-10" />
   </div>
 );
+
 const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
 const shimmer = (w: number, h: number) => `
 <svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
   <rect width="100%" height="100%" fill="#111"/>
@@ -48,17 +50,14 @@ export default function MalluMartPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [isMobile, setIsMobile] = useState(false);
-  
-
-  const { scrollY } = useScroll();
-  const y = useTransform(scrollY, [0, 500], isMobile ? [0, 0] : [0, 150]);
 
   useEffect(() => {
-  const check = () => setIsMobile(window.innerWidth < 768);
-  check();
-  window.addEventListener('resize', check);
-  return () => window.removeEventListener('resize', check);
-}, []); 
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []); 
+
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -67,30 +66,27 @@ export default function MalluMartPage() {
         const res = await fetch('/api/mart');
         const data = await res.json();
         setItems(Array.isArray(data) ? data : []);
-      } catch (err) { console.error(err);setError(true); } finally { setLoading(false); }
+      } catch (err) { console.error(err); setError(true); } finally { setLoading(false); }
     }
     init();
   }, []);
 
   const filteredItems = useMemo(() => {
-  const query = searchQuery.toLowerCase();
-  return items.filter(item => {
-    // 🔥 NEW: Only show if Approved OR if the current user is the owner
-    const isOwner = user?.email === item.userEmail;
-    if (!item.isApproved && !isOwner) return false;
-    if (item.isDraft && !isOwner) return false;
-    if (item.isApproved === false && !isOwner) return false;
-    const matchesSearch = 
-      item.name?.toLowerCase().includes(query) || 
-      item.description?.toLowerCase().includes(query) ||
-      item.area?.toLowerCase().includes(query) ||
-      item.category?.toLowerCase().includes(query);
+    const query = searchQuery.toLowerCase();
+    return items.filter(item => {
+      const isOwner = user?.email === item.userEmail;
+      if (!item.isApproved && !isOwner) return false;
+      if (item.isDraft && !isOwner) return false;
       
-    const matchesCategoryDropdown = activeCategory === "ALL" || item.category?.toUpperCase() === activeCategory;
-    
-    return matchesSearch && matchesCategoryDropdown;
-  });
-}, [searchQuery, activeCategory, items, user]);
+      const matchesSearch = 
+        item.name?.toLowerCase().includes(query) || 
+        item.area?.toLowerCase().includes(query) ||
+        item.category?.toLowerCase().includes(query);
+        
+      const matchesCategoryDropdown = activeCategory === "ALL" || item.category?.toUpperCase() === activeCategory;
+      return matchesSearch && matchesCategoryDropdown;
+    });
+  }, [searchQuery, activeCategory, items, user]);
 
   const handleDeleteExecute = async () => {
     if (!itemToDelete) return;
@@ -117,16 +113,9 @@ export default function MalluMartPage() {
       <Loader2 className="animate-spin text-brandRed" size={30} strokeWidth={1} />
     </div>
   );
-  if (error) return (
-  <div className="min-h-screen bg-black flex items-center justify-center">
-    <p className="text-brandRed font-black uppercase tracking-widest text-sm">
-      Failed to load. Please refresh.
-    </p>
-  </div>
-);
+
   return (
     <div className="min-h-screen bg-[#030303] text-white relative selection:bg-brandRed/30 overflow-x-hidden">
-      
       <TribeConfirm 
         isOpen={confirmOpen}
         title="Purge Protocol"
@@ -136,73 +125,76 @@ export default function MalluMartPage() {
       />
 
       <div
-  className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
-  style={{
-    backgroundImage: 'url(/events/mmart.png)',
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    opacity: 0.3,
-    filter: 'brightness(0.8)',
-    transform: 'translateZ(0)',
-    willChange: 'transform',
-  }}
-/>
-<div className="fixed inset-0 z-0 pointer-events-none">
-  <div className="absolute inset-0 bg-gradient-to-b from-[#030303] via-transparent to-[#030303] z-[1]" />
-</div>
+        className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
+        style={{
+          backgroundImage: 'url(/events/mmart.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: 0.3,
+          filter: 'brightness(0.8)',
+          transform: 'translateZ(0)',
+          willChange: 'transform',
+        }}
+      />
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#030303] via-transparent to-[#030303] z-[1]" />
+      </div>
 
-      <div className="max-w-7xl mx-auto relative z-10 pt-32 md:pt-64 pb-20 px-6">
+      {/* 🔥 Optimized Padding: pt-32 md:pt-44 */}
+      <div className="max-w-7xl mx-auto relative z-10 pt-32 md:pt-44 pb-20 px-6">
         
-        <div className="flex flex-col md:flex-row justify-between items-start mb-16 gap-8">
-          <div className="space-y-6 max-w-2xl">
+        {/* 🔥 Compact Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start mb-10 gap-8">
+          <div className="space-y-4 max-w-2xl">
             <div className="inline-flex items-center gap-3 px-5 py-2 bg-zinc-950/60 backdrop-blur-sm md:backdrop-blur-xl border border-white/10 rounded-full">
               <Zap size={14} className="text-brandRed" />
               <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">Business Network</span>
             </div>
-            <div className="space-y-2">
-                <h1 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-none">
+            <div className="space-y-1">
+                <h1 className="text-5xl md:text-7xl font-black italic uppercase tracking-tighter leading-none">
                 Mallu <span className="text-brandRed">Mart .</span>
                 </h1>
-                <p className="text-zinc-400 text-sm md:text-lg font-medium leading-relaxed max-w-xl italic">
-                    The exclusive professional hub for Puneri Mallus. Connect with verified local businesses, skilled professionals, and service providers within our community.
+                <p className="text-zinc-400 text-xs md:text-sm font-medium leading-relaxed max-w-xl italic">
+                    The professional hub for Puneri Mallus. Connect with verified businesses and skilled service providers.
                 </p>
             </div>
           </div>
 
           <Link href="/directory/list" className="w-full md:w-auto">
-            <button className="group w-full flex items-center justify-center gap-3 bg-white text-black px-8 py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest hover:bg-brandRed hover:text-white transition-all shadow-2xl active:scale-95">
-              <Briefcase size={20} strokeWidth={2.5} className="md:group-hover:scale-110 transition-transform" /> 
-              List Business / Profession
+            <button className="group w-full flex items-center justify-center gap-3 bg-white text-black px-6 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-brandRed hover:text-white transition-all shadow-2xl active:scale-95">
+              <Briefcase size={18} strokeWidth={2.5} /> 
+              List Business/Profession
             </button>
           </Link>
         </div>
 
-        <div className="mb-20 grid grid-cols-1 md:grid-cols-2 gap-6 bg-zinc-950/40 p-6 rounded-[32px] border border-white/10 backdrop-blur-sm md:backdrop-blur-xl">
+        {/* 🔥 Compact Search & Filter Section */}
+        <div className="mb-12 grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-950/40 p-4 rounded-[28px] border border-white/10 backdrop-blur-md">
           <div className="relative group">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-brandRed transition-colors" size={18} />
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-brandRed transition-colors" size={16} />
             <input 
               type="text"
-              placeholder="SEARCH BY NAME, CATEGORY, OR AREA..."
+              placeholder="SEARCH BY NAME, AREA..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-black/50 border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-[10px] font-black tracking-widest uppercase focus:border-brandRed outline-none transition-all"
+              className="w-full bg-black/50 border border-white/10 rounded-xl py-4 pl-12 pr-6 text-[9px] font-black tracking-widest uppercase focus:border-brandRed outline-none transition-all"
             />
           </div>
 
           <div className="relative group">
-            <Filter className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-brandRed transition-colors pointer-events-none" size={18} />
+            <Filter className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-brandRed transition-colors pointer-events-none" size={16} />
             <select 
               value={activeCategory}
               onChange={(e) => setActiveCategory(e.target.value)}
-              className="w-full bg-black/50 border border-white/10 rounded-2xl py-5 pl-14 pr-10 text-[10px] font-black tracking-widest uppercase appearance-none focus:border-brandRed outline-none transition-all cursor-pointer"
+              className="w-full bg-black/50 border border-white/10 rounded-xl py-4 pl-12 pr-10 text-[9px] font-black tracking-widest uppercase appearance-none focus:border-brandRed outline-none transition-all cursor-pointer"
             >
               {FIXED_CATEGORIES.map((cat) => (
                 <option key={cat} value={cat} className="bg-zinc-900 text-white font-bold">
-                  {cat === "ALL" ? "SHOW ALL CATEGORIES" : cat}
+                  {cat === "ALL" ? "ALL CATEGORIES" : cat}
                 </option>
               ))}
             </select>
-            <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-600 pointer-events-none group-focus-within:text-brandRed" size={18} />
+            <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-600 pointer-events-none" size={16} />
           </div>
         </div>
 
@@ -211,19 +203,20 @@ export default function MalluMartPage() {
             {filteredItems.map((item) => (
               <div key={item._id} className={`group relative bg-zinc-950/30 border rounded-[40px] overflow-hidden transition-all duration-500 shadow-2xl backdrop-blur-sm md:backdrop-blur-2xl ${item.isPremium ? 'border-brandRed/60 shadow-[0_0_40px_rgba(255,0,0,0.15)]' : 'border-white/5 hover:border-brandRed/30'}`}>
                 
+                {/* DRAFT BADGE */}
+                {user?.email === item.userEmail && item.isDraft && (
+                  <div className="absolute top-20 left-6 z-[40] bg-zinc-800/90 backdrop-blur-md text-amber-400 px-4 py-1.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase tracking-widest shadow-xl border border-white/5">
+                    <Edit3 size={12} className="text-amber-400" /> Work in Progress (Draft)
+                  </div>
+                )}
                 
-                  {/* 🔥 2. DRAFT BADGE (Add this here) */}
-  {user?.email === item.userEmail && item.isDraft && (
-    <div className="absolute top-20 left-6 z-[40] bg-zinc-800/90 backdrop-blur-md text-amber-400 px-4 py-1.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase tracking-widest shadow-xl border border-white/5">
-      <Edit3 size={12} className="text-amber-400" /> Work in Progress (Draft)
-    </div>
-  )}
-               {/* 🔥 3. PENDING BADGE (Keep your existing pending logic but ensure it doesn't show if it's a draft) */}
-  {user?.email === item.userEmail && !item.isApproved && !item.isDraft && (
-    <div className="absolute top-20 left-6 z-[40] bg-zinc-950/80 backdrop-blur-md text-white px-4 py-1.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase tracking-widest shadow-xl animate-pulse">
-      <Zap size={12} className="text-brandRed fill-brandRed" /> Pending Approval
-    </div>
-  )}
+                {/* PENDING BADGE */}
+                {user?.email === item.userEmail && !item.isApproved && !item.isDraft && (
+                  <div className="absolute top-20 left-6 z-[40] bg-zinc-950/80 backdrop-blur-md text-white px-4 py-1.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase tracking-widest shadow-xl animate-pulse">
+                    <Zap size={12} className="text-brandRed fill-brandRed" /> Pending Approval
+                  </div>
+                )}
+
                 {user?.email === item.userEmail && (
                   <div className="absolute top-6 left-6 z-[40] flex gap-2">
                     <Link href={`/directory/list?edit=${item._id}`} className="p-3 bg-black/60 backdrop-blur-sm md:backdrop-blur-md text-white hover:text-brandRed rounded-xl border border-white/10 transition-all shadow-xl">
@@ -246,7 +239,7 @@ export default function MalluMartPage() {
                   <Image 
                     src={(item.imagePaths && item.imagePaths[0]) ? `https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${item.imagePaths[0]}` : (item.imagePath ? `https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${item.imagePath}` : "/about/placeholder.jpeg")} 
                     alt={item.name} fill placeholder="blur"
-                    blurDataURL={blurPlaceholder}  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover md:group-hover:scale-110 transition-all duration-1000"
+                    blurDataURL={blurPlaceholder} sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover md:group-hover:scale-110 transition-all duration-1000"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
                   <div className="absolute bottom-6 right-6 bg-zinc-950/80 px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-1.5">
@@ -269,7 +262,7 @@ export default function MalluMartPage() {
                         View Profile <ArrowUpRight size={14} />
                       </button>
                     </Link>
-                    <a href={`https://wa.me/${item.contact}`} target="_blank" className="w-full bg-zinc-900 border border-white/5 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest text-center text-zinc-400 hover:text-white transition-all flex items-center justify-center gap-2">
+                    <a href={`https://wa.me/${item.contact}`} target="_blank" rel="noopener noreferrer" className="w-full bg-zinc-900 border border-white/5 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest text-center text-zinc-400 hover:text-white transition-all flex items-center justify-center gap-2">
                       <MessageCircle size={14} /> WhatsApp
                     </a>
                   </div>
