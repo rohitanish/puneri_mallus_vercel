@@ -265,7 +265,7 @@ export default function Home() {
               </div>
             ) : (
               <div className="text-center py-10">
-                <span className="text-white/10 font-black italic text-7xl uppercase tracking-tighter">Soon</span>
+                <span className="text-white/40 font-black italic text-7xl uppercase tracking-tighter">Soon</span>
               </div>
             )}
           </div>

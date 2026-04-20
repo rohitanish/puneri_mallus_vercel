@@ -150,8 +150,8 @@ export default function MartVerificationModal({
                           <doc.icon size={20} />
                         </div>
                         <div className="flex-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-white">{doc.label}</p>
-                          <p className="text-[8px] font-bold text-zinc-600 uppercase tracking-tighter mt-0.5">{files[doc.key] ? files[doc.key]?.name : doc.desc}</p>
+                          <p className="text-[14px] font-black uppercase tracking-widest text-white">{doc.label}</p>
+                          <p className="text-[10px] font-bold text-white-600 uppercase tracking-tighter mt-0.5">{files[doc.key] ? files[doc.key]?.name : doc.desc}</p>
                         </div>
                         <Upload size={16} className={files[doc.key] ? 'text-brandRed' : 'text-zinc-800'} />
                         <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => handleFileChange(e, doc.key)} />
@@ -161,7 +161,7 @@ export default function MartVerificationModal({
 
                   <div className="bg-white/5 p-4 rounded-2xl border border-white/5 flex gap-3">
                     <AlertCircle size={16} className="text-zinc-500 shrink-0 mt-0.5" />
-                    <p className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest leading-relaxed">
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-relaxed">
                       Submission of false documents will result in a <span className="text-brandRed">permanent ban</span> from the Mallu Mart ecosystem.
                     </p>
                   </div>

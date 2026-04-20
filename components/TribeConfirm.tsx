@@ -55,7 +55,7 @@ export default function TribeConfirm({ isOpen, title, message, onConfirm, onCanc
                   disabled={loading}
                   className="w-full py-4 bg-brandRed text-white font-black uppercase tracking-widest rounded-xl hover:bg-white hover:text-black transition-all shadow-lg active:scale-95 disabled:opacity-50"
                 >
-                  {loading ? "Processing Access Termination..." : "Confirm Revoke"}
+                  {loading ? "Processing Access Termination..." : "Confirm"}
                 </button>
                 <button
                   onClick={onCancel}

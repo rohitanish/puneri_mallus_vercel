@@ -103,6 +103,15 @@ export default function AdminPortal() {
   status: "Live",
   color: "from-brandRed/40"
 },
+// --- 🔥 NEW REVENUE MODULE ---
+    {
+      title: "Payments Control",
+      desc: "Configure global payment gates, access pricing, and mart monetization protocols.",
+      icon: <Handshake className="text-yellow-500" size={32} />,
+      link: "/admin/payments", // This matches your new route
+      status: "Config",
+      color: "from-yellow-500/20"
+    },
   ];
 
   // Rest of your logic (filteredModules, return statement) remains the same

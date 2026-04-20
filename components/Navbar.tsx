@@ -3,20 +3,49 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Instagram, MessageCircle, User, LogOut, Facebook } from 'lucide-react';
+import { Menu, X, Instagram, MessageCircle, User, LogOut, Facebook, Crown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createBrowserClient } from '@supabase/ssr';
+
+// 🔥 IMPORT YOUR MEMBERSHIP COMPONENT HERE
+import MembershipCard from '@/components/Membership'; 
 
 export default function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
+  
+  // --- STATES ---
   const [hasUpcoming, setHasUpcoming] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
+  const [membershipPrice, setMembershipPrice] = useState<number>(999); 
+  const [membershipBenefits, setMembershipBenefits] = useState<string[]>([
+    "Lifetime Inner Circle Access",
+    "VIP Event Invites",
+    "Full Mallu Mart Access"
+  ]);
+  // 🔥 NEW: STATE TO CONTROL THE POPUP MODAL
+  const [showMembershipModal, setShowMembershipModal] = useState(false);
+
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
+  // --- PREMIUM CHECK FUNCTION ---
+  const fetchPremiumStatus = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/profile/check?id=${userId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.exists && data.profile) {
+        setIsPremium(data.profile.isPremiumMember || false);
+      }
+    } catch (e) {
+      console.error("Premium check failed", e);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -24,10 +53,9 @@ export default function Navbar() {
     
     const fetchUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      // Only set user if there is an active session and the email is confirmed
-      // or if they have successfully logged in (prevents signup "ghost" profiles)
       if (session?.user && (session.user.confirmed_at || session.user.last_sign_in_at)) {
         setUser(session.user);
+        fetchPremiumStatus(session.user.id);
       } else {
         setUser(null);
       }
@@ -36,12 +64,13 @@ export default function Navbar() {
     fetchUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Only show profile if the event is a explicit SIGN_IN
-      // This prevents the 'Join Tribe' button from turning into a profile during Signup
       if (event === 'SIGNED_IN' && session?.user) {
         setUser(session.user);
+        fetchPremiumStatus(session.user.id);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
+        setIsPremium(false);
+        setShowMembershipModal(false); // Close modal on logout
       }
     });
 
@@ -51,17 +80,30 @@ export default function Navbar() {
     };
   }, [supabase]);
 
+  // FETCH EVENTS & DYNAMIC PRICE
   useEffect(() => {
-    const checkEvents = async () => {
+    const fetchGlobalData = async () => {
       try {
-        const res = await fetch('/api/events/manage');
-        const data = await res.json();
-        setHasUpcoming(data.hasUpcoming);
+        const eventRes = await fetch('/api/events/manage');
+        const eventData = await eventRes.json();
+        setHasUpcoming(eventData.hasUpcoming);
+
+        const settingsRes = await fetch('/api/admin/settings');
+        const settingsData = await settingsRes.json();
+        if (settingsData?.membershipPrice) {
+          setMembershipPrice(settingsData.membershipPrice);
+        }
+        if (settingsData?.membershipBenefits) {
+          const benefitsArray = settingsData.membershipBenefits
+            .split(',')
+            .map((benefit: string) => benefit.trim());
+          setMembershipBenefits(benefitsArray);
+        }
       } catch (e) {
-        console.error("Signal check failed");
+        console.error("Failed to fetch global data", e);
       }
     };
-    checkEvents();
+    fetchGlobalData();
   }, []);
 
   const handleLogout = async () => {
@@ -137,11 +179,27 @@ export default function Navbar() {
             <div className="hidden lg:flex items-center gap-4">
               {user ? (
                 <div className="flex items-center gap-4 relative group">
+                  
+                  {/* 🔥 REVERTED: JUST THE BUTTON ON DESKTOP */}
+                  {!isPremium && (
+                    <button 
+                      onClick={() => setShowMembershipModal(true)}
+                      className="hidden sm:flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-yellow-500 to-amber-600 text-black rounded-full font-black uppercase text-[9px] tracking-widest shadow-[0_0_15px_rgba(234,179,8,0.4)] hover:scale-105 transition-all animate-pulse"
+                    >
+                      <Crown size={12} className="text-black" fill="currentColor" />
+                      Get Premium
+                    </button>
+                  )}
+
                   <Link
                     href="/profile"
-                    className="flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 p-1.5 pr-4 xl:pr-5 rounded-full hover:border-brandRed transition-all"
+                    className={`flex items-center gap-3 backdrop-blur-md border p-1.5 pr-4 xl:pr-5 rounded-full transition-all ${
+                      isPremium 
+                        ? 'bg-yellow-500/10 border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.2)]' 
+                        : 'bg-white/5 border-white/10 hover:border-brandRed'
+                    }`}
                   >
-                    <div className="w-8 h-8 xl:w-9 xl:h-9 bg-brandRed rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(255,0,0,0.4)] overflow-hidden">
+                    <div className={`w-8 h-8 xl:w-9 xl:h-9 rounded-full flex items-center justify-center overflow-hidden ${isPremium ? 'bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]' : 'bg-brandRed shadow-[0_0_15px_rgba(255,0,0,0.4)]'}`}>
                       {user.user_metadata?.avatar_url ? (
                         <img 
                           src={user.user_metadata.avatar_url} 
@@ -149,12 +207,17 @@ export default function Navbar() {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <User size={14} className="text-white" />
+                        <User size={14} className={isPremium ? "text-black" : "text-white"} />
                       )}
                     </div>
                     
                     <div className="flex flex-col text-left">
-                      <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Active Member</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`font-black uppercase tracking-widest leading-none mb-1 ${isPremium ? 'text-[9px] text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]' : 'text-[7px] text-zinc-500'}`}>
+                          {isPremium ? 'Premium Member' : 'Active Member'}
+                        </span>
+                        {isPremium && <Crown size={12} className="text-yellow-500 mb-1 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]" fill="currentColor" />}
+                      </div>
                       <span className="text-[10px] font-black text-white uppercase italic leading-none truncate max-w-[100px]">
                         {user.user_metadata?.full_name?.split(' ')[0] || 'Tribe User'}
                       </span>
@@ -243,20 +306,40 @@ export default function Navbar() {
               <div className="pt-6 sm:pt-8 border-t border-white/10 space-y-5">
                 {user ? (
                   <div className="flex flex-col gap-4">
+                    
+                    {/* 🔥 JUST THE BUTTON ON MOBILE MENU */}
+                    {!isPremium && (
+                      <button 
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          setShowMembershipModal(true);
+                        }}
+                        className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-black rounded-xl font-black uppercase text-[10px] tracking-widest shadow-[0_0_15px_rgba(234,179,8,0.4)] animate-pulse"
+                      >
+                        <Crown size={14} className="text-black" fill="currentColor" />
+                        Get Premium
+                      </button>
+                    )}
+
                     <Link 
                       href="/profile" 
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10"
+                      className={`flex items-center gap-4 p-4 rounded-2xl border ${isPremium ? 'bg-yellow-500/10 border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 'bg-white/5 border-white/10'}`}
                     >
-                      <div className="w-10 h-10 bg-brandRed rounded-full flex items-center justify-center overflow-hidden">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center overflow-hidden ${isPremium ? 'bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]' : 'bg-brandRed'}`}>
                         {user.user_metadata?.avatar_url ? (
                           <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                         ) : (
-                          <User size={18} className="text-white" />
+                          <User size={18} className={isPremium ? "text-black" : "text-white"} />
                         )}
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Active Member</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-black uppercase tracking-widest ${isPremium ? 'text-[10px] text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]' : 'text-[8px] text-zinc-500'}`}>
+                            {isPremium ? 'Premium Member' : 'Active Member'}
+                          </span>
+                          {isPremium && <Crown size={14} className="text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]" fill="currentColor" />}
+                        </div>
                         <span className="text-sm font-black text-white uppercase italic">{user.user_metadata?.full_name || 'Tribe User'}</span>
                       </div>
                     </Link>
@@ -284,6 +367,45 @@ export default function Navbar() {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* 🔥 NEW: THE POPUP MODAL FOR THE MEMBERSHIP CARD */}
+      <AnimatePresence>
+        {showMembershipModal && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            {/* Dark blur background */}
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              onClick={() => setShowMembershipModal(false)}
+            />
+            
+            {/* Modal Container */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} 
+              animate={{ opacity: 1, scale: 1, y: 0 }} 
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative z-10 w-full max-w-2xl"
+            >
+              {/* Close Button floating top right of the card */}
+              <button 
+                onClick={() => setShowMembershipModal(false)}
+                className="absolute -top-4 -right-4 md:top-4 md:right-4 z-[210] p-2 bg-zinc-900 border border-white/20 hover:border-brandRed hover:bg-brandRed hover:text-white rounded-full text-zinc-400 transition-all shadow-xl"
+              >
+                <X size={20} />
+              </button>
+
+              <MembershipCard 
+                price={membershipPrice} 
+                benefits={membershipBenefits} // 🔥 Now this updates from the admin panel too!
+                userId={user?.id || ""}
+                userEmail={user?.email || ""}
+              />
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </>

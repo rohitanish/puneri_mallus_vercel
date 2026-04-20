@@ -1,5 +1,6 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
+import Script from "next/script";
 import Navbar from "@/components/Navbar";
 import Preloader from "@/components/Preloader";
 import { AlertProvider } from "@/context/AlertContext";
@@ -27,6 +28,12 @@ export default function RootLayout({
           <Navbar />
           <main className="min-h-screen w-full overflow-x-hidden">
             {children}
+            {/* 2. Add Razorpay Checkout Script */}
+        <Script
+          id="razorpay-checkout-js"
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="lazyOnload"
+        />
             <SpeedInsights />
             <Analytics/>
           </main>

@@ -135,9 +135,10 @@ const [pickerField, setPickerField] = useState<'openTime' | 'closeTime' | null>(
   };
 
   const updateService = (id: string, field: 'name' | 'desc', val: string) => {
-    if (field === 'desc' && val.length > 100) return;
-    setServices(services.map(s => s.id === id ? { ...s, [field]: val } : s));
-  };
+  // Allow up to 300 characters to match your textarea maxLength
+  if (field === 'desc' && val.length > 300) return; 
+  setServices(services.map(s => s.id === id ? { ...s, [field]: val } : s));
+};
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -404,14 +405,27 @@ const [pickerField, setPickerField] = useState<'openTime' | 'closeTime' | null>(
                    <button onClick={addService} className="p-3 bg-brandRed text-white rounded-xl hover:bg-white hover:text-black transition-all flex items-center justify-center gap-2 text-[10px] font-bold w-full sm:w-auto"><Plus size={16}/> ADD SERVICE</button>
                 </div>
                 <div className="space-y-4">
-                  {services.map((s) => (
-                    <div key={s.id} className="flex flex-col md:flex-row gap-4 p-5 bg-black rounded-2xl border border-white/5 relative">
-                        <input className="flex-1 bg-zinc-900 border border-white/10 rounded-xl p-3 text-[11px] font-bold text-white outline-none focus:border-brandRed" placeholder="Service Name" value={s.name} onChange={(e) => updateService(s.id, 'name', e.target.value)} />
-                        <input className="flex-[2] bg-zinc-900 border border-white/10 rounded-xl p-3 text-[11px] text-zinc-400 outline-none focus:border-brandRed" placeholder="Short Description" value={s.desc} onChange={(e) => updateService(s.id, 'desc', e.target.value)} />
-                        <button onClick={() => setServices(services.filter(x => x.id !== s.id))} className="p-3 text-zinc-600 hover:text-brandRed transition-colors flex justify-center"><Trash2 size={18}/></button>
-                    </div>
-                  ))}
-                </div>
+    {services.map((s) => (
+      <div key={s.id} className="flex flex-col md:flex-row gap-4 p-5 bg-black rounded-2xl border border-white/5 relative">
+          <input 
+            className="flex-1 bg-zinc-900 border border-white/10 rounded-xl p-3 text-[11px] font-bold text-white outline-none focus:border-brandRed" 
+            placeholder="Service Name" 
+            value={s.name} 
+            onChange={(e) => updateService(s.id, 'name', e.target.value)} 
+          />
+          <input 
+            className="flex-[2] bg-zinc-900 border border-white/10 rounded-xl p-3 text-[11px] text-zinc-400 outline-none focus:border-brandRed" 
+            placeholder="Short Description" 
+            value={s.desc} 
+            maxLength={300} // 🔥 Increased to allow your long text
+            onChange={(e) => updateService(s.id, 'desc', e.target.value)} 
+          />
+          <button onClick={() => setServices(services.filter(x => x.id !== s.id))} className="p-3 text-zinc-600 hover:text-brandRed transition-colors flex justify-center">
+            <Trash2 size={18}/>
+          </button>
+      </div>
+    ))}
+  </div>
               </div>
 
               <div className="space-y-2">

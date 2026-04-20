@@ -347,3 +347,96 @@ export async function sendMartVerificationSuccessEmail(userEmail: string, busine
     console.error("MAIL_VERIFY_SUCCESS_ERROR:", error);
   }
 }
+
+export async function sendMartSubscriptionEmail(to: string, plan: string, orderId: string, paymentId: string) {
+  const mailOptions = {
+    from: `"Puneri Mallus Tribe" <${process.env.EMAIL_USER}>`,
+    to: to,
+    subject: `🔓 Unlocked: Mallu Mart ${plan} Access`,
+    html: `
+      <div style="font-family: 'Segoe UI', sans-serif; max-width: 500px; margin: auto; background: #030303; color: #ffffff; padding: 40px; border-radius: 30px; border: 1px solid #ff0000;">
+        <h2 style="color: #FF0000; text-transform: uppercase; font-style: italic; font-weight: 900; letter-spacing: -1px; text-align: center; margin-top: 0;">Access Granted</h2>
+        <p style="text-align: center; color: #aaa; font-size: 14px; margin-bottom: 30px;">Your transaction was successful. You now have full access to Mallu Mart professional profiles.</p>
+        
+        <div style="background: #111; padding: 20px; border-radius: 15px; border: 1px solid #222; margin-bottom: 30px;">
+          <p style="margin: 0 0 10px 0; font-size: 13px; color: #ccc;"><strong>Plan:</strong> <span style="color: #fff; font-weight: bold;">Mallu Mart ${plan}</span></p>
+          <p style="margin: 0 0 10px 0; font-size: 13px; color: #ccc;"><strong>Order ID:</strong> <span style="font-family: monospace; color: #ff0000;">${orderId}</span></p>
+          <p style="margin: 0; font-size: 13px; color: #ccc;"><strong>Payment ID:</strong> <span style="font-family: monospace; color: #ff0000;">${paymentId}</span></p>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+          <h4 style="color: #fff; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; border-bottom: 1px solid #333; padding-bottom: 5px;">Benefits Unlocked</h4>
+          <ul style="color: #aaa; font-size: 13px; line-height: 1.8; padding-left: 20px;">
+            <li>Instant access to hidden business portfolios</li>
+            <li>Direct WhatsApp & Calling integration</li>
+            <li>Access to Google Maps navigation links</li>
+          </ul>
+        </div>
+
+        <div style="text-align: center;">
+          <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://punerimallusvercel.vercel.app'}/directory" style="display: inline-block; background: #ff0000; color: #fff; padding: 15px 30px; border-radius: 50px; text-decoration: none; font-weight: 900; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">Open Directory</a>
+        </div>
+        
+        <p style="margin-top: 40px; font-size: 10px; color: #555; text-align: center;">
+          If your account does not reflect these changes, please reply to this email.
+        </p>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error("MAIL_MART_SUBSCRIPTION_ERROR:", error);
+  }
+}
+
+/**
+ * 📧 NOTIFY USER: Lifetime Premium Membership Purchased
+ */
+export async function sendPremiumMembershipEmail(to: string, orderId: string, paymentId: string) {
+  const mailOptions = {
+    from: `"Puneri Mallus VIP" <${process.env.EMAIL_USER}>`,
+    to: to,
+    subject: `👑 Welcome to the Inner Circle`,
+    html: `
+      <div style="font-family: 'Segoe UI', sans-serif; max-width: 500px; margin: auto; background: #030303; color: #ffffff; padding: 40px; border-radius: 30px; border: 1px solid #EAB308;">
+        <div style="text-align: center; margin-bottom: 15px;">
+           <h1 style="color: #EAB308; font-size: 40px; margin: 0; text-shadow: 0 0 20px rgba(234,179,8,0.5);">👑</h1>
+        </div>
+        <h2 style="color: #EAB308; text-transform: uppercase; font-style: italic; font-weight: 900; letter-spacing: -1px; text-align: center; margin-top: 0;">Inner Circle Access</h2>
+        <p style="text-align: center; color: #aaa; font-size: 14px; margin-bottom: 30px;">Your transaction was successful. Welcome to the elite tier of the Puneri Mallus Tribe.</p>
+        
+        <div style="background: #111; padding: 20px; border-radius: 15px; border: 1px solid #333; margin-bottom: 30px;">
+          <p style="margin: 0 0 10px 0; font-size: 13px; color: #ccc;"><strong>Plan:</strong> <span style="color: #EAB308; font-weight: bold;">Lifetime Premium</span></p>
+          <p style="margin: 0 0 10px 0; font-size: 13px; color: #ccc;"><strong>Order ID:</strong> <span style="font-family: monospace; color: #EAB308;">${orderId}</span></p>
+          <p style="margin: 0; font-size: 13px; color: #ccc;"><strong>Payment ID:</strong> <span style="font-family: monospace; color: #EAB308;">${paymentId}</span></p>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+          <h4 style="color: #fff; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; border-bottom: 1px solid #333; padding-bottom: 5px;">Your VIP Benefits</h4>
+          <ul style="color: #aaa; font-size: 13px; line-height: 1.8; padding-left: 20px;">
+            <li><strong style="color: #EAB308;">Permanent Gold Premium Badge</strong> on your profile</li>
+            <li>Free, unlimited access to all Mallu Mart listings</li>
+            <li>Exclusive VIP Event Invitations & Discounts</li>
+            <li>Decision-making power in community polls</li>
+          </ul>
+        </div>
+
+        <div style="text-align: center;">
+          <a href="${process.env.NEXT_PUBLIC_BASE_URL || 'https://punerimallusvercel.vercel.app'}/profile" style="display: inline-block; background: #EAB308; color: #000; padding: 15px 30px; border-radius: 50px; text-decoration: none; font-weight: 900; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">View Your VIP Profile</a>
+        </div>
+        
+        <p style="margin-top: 40px; font-size: 10px; color: #555; text-align: center;">
+          If your account does not reflect these changes, please reply to this email.
+        </p>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error("MAIL_PREMIUM_SUBSCRIPTION_ERROR:", error);
+  }
+}

@@ -8,12 +8,19 @@ import { createBrowserClient } from '@supabase/ssr';
 import { 
   MessageCircle, MapPin, Globe, Instagram, 
   ExternalLink, Maximize2, X, ShieldCheck, Share2, 
-  Phone, Star, ChevronRight, Zap, ListChecks, Info, Image as ImageIcon, Clock
+  Phone, Star, ChevronRight, Zap, ListChecks, Info, 
+  Image as ImageIcon, Clock, Lock, Unlock, Eye, Loader2
 } from 'lucide-react';
-import { Loader2 } from 'lucide-react';
 
-// --- NEW IMPORT ---
+// --- CUSTOM UI COMPONENTS ---
 import MartVerificationModal from '@/components/MartVerificationModal';
+import TribeAlert from '@/components/TribeAlert';
+import TribeConfirm from '@/components/TribeConfirm';
+
+interface UserProfile {
+  martUnlocked?: boolean;
+  isPremiumMember?: boolean;
+}
 
 export default function ProfessionalDetailsPage() {
   const { id } = useParams();
@@ -23,13 +30,19 @@ export default function ProfessionalDetailsPage() {
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   
-  // --- VERIFICATION STATES ---
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isPaymentEnabled, setIsPaymentEnabled] = useState(false);
   const [isVerifyOpen, setIsVerifyOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-  // Rating Mechanism
-  const [userRating, setUserRating] = useState(0);
-  const [avgRating, setAvgRating] = useState(3); // Default 3
+  const [alertConfig, setAlertConfig] = useState({ isVisible: false, message: '', type: 'info' as 'success' | 'error' | 'info' });
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+
+  const [avgRating, setAvgRating] = useState(3);
+
+  const [martPlans, setMartPlans] = useState<any>(null);
+  const [selectedPlan, setSelectedPlan] = useState<string>('');
 
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 500], [0, 150]);
@@ -39,30 +52,173 @@ export default function ProfessionalDetailsPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // Section Refs
   const overviewRef = useRef<HTMLDivElement>(null);
   const photosRef = useRef<HTMLDivElement>(null);
   const servicesRef = useRef<HTMLDivElement>(null);
+  // 🔥 NEW REF: To scroll down to the paywall options
+  const paywallRef = useRef<HTMLDivElement>(null);
 
+  // --- INITIAL DATA FETCH ---
   useEffect(() => {
-    async function fetchDetails() {
+    async function fetchAllData() {
       try {
-        // Sync Auth Session
         const { data: { user } } = await supabase.auth.getUser();
         setCurrentUser(user);
 
-        const res = await fetch('/api/mart');
-        const data = await res.json();
-        const found = data.find((i: any) => i._id === id);
+        const [martRes, settingsRes, profileRes] = await Promise.all([
+          fetch('/api/mart'),
+          fetch('/api/admin/settings'),
+          user?.id 
+            ? fetch(`/api/profile/check?id=${user.id}`) 
+            : Promise.resolve({ ok: true, json: () => Promise.resolve({ exists: false }) })
+        ]);
+
+        const martData = await martRes.json();
+        const settingsData = await settingsRes.json();
+        const profileJson = await profileRes.json();
+        const userProfile = profileJson?.profile || {};
+
+        if (settingsData) {
+          setIsPaymentEnabled(settingsData.martEnabled); 
+
+          const availablePlans = {
+            monthly: { active: settingsData.martMonthlyActive || false, price: settingsData.martMonthlyPrice || 99 },
+            yearly: { active: settingsData.martYearlyActive || false, price: settingsData.martYearlyPrice || 899 },
+            lifetime: { active: settingsData.martLifetimeActive || false, price: settingsData.martLifetimePrice || 2499 }
+          };
+          setMartPlans(availablePlans);
+
+          if (availablePlans.monthly.active) setSelectedPlan('monthly');
+          else if (availablePlans.yearly.active) setSelectedPlan('yearly');
+          else if (availablePlans.lifetime.active) setSelectedPlan('lifetime');
+        }
+
+        const found = martData.find((i: any) => i._id === id);
+        
         if (found) {
           setItem(found);
           if (found.rating) setAvgRating(found.rating);
+
+          const isOwner = user?.email === found.userEmail;
+          const isMasterAdmin = user?.email === 'punerimallus@gmail.com';
+          
+          if (
+            isOwner || 
+            isMasterAdmin || 
+            !settingsData.martEnabled || 
+            userProfile?.isPremiumMember || 
+            userProfile?.martUnlocked
+          ) {
+            setIsUnlocked(true);
+          }
         }
-      } catch (err) { console.error(err); } finally { setLoading(false); }
+      } catch (err) { 
+        console.error("MALLU_MART_INIT_ERROR:", err); 
+      } finally { 
+        setLoading(false); 
+      }
     }
-    fetchDetails();
+    fetchAllData();
   }, [id, supabase]);
 
+  // --- 🔥 UPDATED ACTION HANDLER (Scrolls instead of instantly opening modal) ---
+  const handleLockedAction = (target: string, type: 'URL' | 'UNLOCK' = 'URL') => {
+    if (isUnlocked) {
+      if (type === 'URL' && target) window.open(target, '_blank');
+      return;
+    }
+
+    if (isPaymentEnabled) {
+      // Set the pending action so we can resume it after they pay
+      setPendingAction(target);
+      // SCROLL down to the paywall options smoothly
+      paywallRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Show a quick alert guiding them
+      setAlertConfig({ isVisible: true, message: "Select an access plan to continue.", type: 'info' });
+    } else {
+      setIsUnlocked(true);
+      if (type === 'URL' && target) window.open(target, '_blank');
+    }
+  };
+
+  // --- PAYMENT EXECUTION ---
+  const handleConfirmPayment = async () => {
+    setConfirmOpen(false);
+    setLoading(true);
+
+    try {
+      const orderRes = await fetch('/api/razorpay/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          businessId: id, 
+          paymentType: 'MART',
+          plan: selectedPlan.toUpperCase()
+        })
+      });
+
+      const orderData = await orderRes.json();
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, 
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "PUNERI MALLUS",
+        description: `Unlock Mallu Mart Access (${selectedPlan.toUpperCase()})`,
+        order_id: orderData.id,
+        config: {
+          display: {
+            blocks: {
+              banks: { name: 'Pay via UPI / QR', instruments: [{ method: 'upi' }] },
+            },
+            sequence: ['block.banks', 'block.cards'],
+            preferences: { show_default_blocks: true },
+          },
+        },
+        handler: async function (response: any) {
+          const verifyRes = await fetch('/api/razorpay/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              userId: currentUser.id,
+              userEmail: currentUser?.email, // 🔥 ADD THIS LINE!
+              paymentType: 'MART',
+              plan: selectedPlan.toUpperCase()
+            })
+          });
+
+          const verifyData = await verifyRes.json();
+          if (verifyData.success) {
+            setIsUnlocked(true);
+            setAlertConfig({ isVisible: true, message: `Mallu Mart Unlocked (${selectedPlan.toUpperCase()})!`, type: 'success' });
+            
+            // If they were trying to click a link, open it after success!
+            if (pendingAction && pendingAction !== '') {
+               window.open(pendingAction, '_blank');
+            }
+            
+            setTimeout(() => window.location.reload(), 1500);
+          }
+        },
+        prefill: { email: currentUser?.email || "" },
+        theme: { color: "#FF0000" },
+        modal: { ondismiss: () => setLoading(false) }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+
+    } catch (err) {
+      setAlertConfig({ isVisible: true, message: "Gateway Error", type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- RENDERING LOGIC ---
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-brandRed" size={40} /></div>;
   if (!item) return <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white"><h1>Profile Not Found</h1><Link href="/directory" className="px-6 py-3 bg-brandRed rounded-lg font-bold text-sm uppercase">Return</Link></div>;
 
@@ -77,314 +233,285 @@ export default function ProfessionalDetailsPage() {
   ];
 
   const scrollToSection = (ref: any, id: string) => {
+    if (!isUnlocked) {
+      handleLockedAction('', 'UNLOCK');
+      return;
+    }
     setActiveTab(id);
-    const offset = 180; // Offset for the sticky tab bar
+    const offset = 180;
     const elementPosition = ref.current?.getBoundingClientRect().top + window.pageYOffset;
-    window.scrollTo({
-      top: elementPosition - offset,
-      behavior: 'smooth'
-    });
+    window.scrollTo({ top: elementPosition - offset, behavior: 'smooth' });
   };
 
   return (
     <div className="min-h-screen bg-[#030303] text-zinc-100 relative overflow-x-hidden selection:bg-brandRed/30">
       
-      {/* 1. BACKGROUND PARALLAX */}
+      <TribeAlert 
+        isVisible={alertConfig.isVisible} 
+        message={alertConfig.message} 
+        type={alertConfig.type} 
+        onClose={() => setAlertConfig({ ...alertConfig, isVisible: false })} 
+      />
+
+      <TribeConfirm 
+        isOpen={confirmOpen}
+        title="Secure Access"
+        message={
+          isPaymentEnabled && martPlans && selectedPlan
+            ? `A fee of ₹${martPlans[selectedPlan].price} is required to unlock this professional profile for ${selectedPlan.toUpperCase()} access.`
+            : "A fee is required to unlock the full Mallu Mart directory and professional contacts."
+        }
+        onConfirm={handleConfirmPayment}
+        onCancel={() => setConfirmOpen(false)}
+      />
+
       <motion.div style={{ y }} className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-[#030303]">
         <Image src="/events/mmart.png" alt="BG" fill priority className="object-cover opacity-[0.2] brightness-[0.7] scale-110" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#030303] via-transparent to-[#030303] z-[1]" />
       </motion.div>
 
-      {/* 2. MAIN CONTENT */}
       <main className="max-w-7xl mx-auto px-6 pt-44 pb-32 relative z-10">
-        
-        {/* HEADER SECTION */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 mb-8 items-start">
-          
-          <div className="lg:col-span-4 relative aspect-square rounded-[32px] overflow-hidden border border-white/10 bg-zinc-900 shadow-2xl group">
-            <Image 
-              src={`https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${thumbnail}`}
-              alt={item.name} fill priority unoptimized className="object-cover"
-            />
-            <button 
-              onClick={() => navigator.share({title: item.name, url: window.location.href})}
-              className="absolute top-4 right-4 p-3 bg-black/60 backdrop-blur-md rounded-full text-white hover:bg-brandRed transition-all z-20"
-            >
-              <Share2 size={18} />
-            </button>
-
-            {item.isVerified && (
-              <div className="absolute top-4 left-4 bg-brandRed text-white px-3 py-1 rounded-full flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest">
-                <ShieldCheck size={10} /> Verified
-              </div>
-            )}
-          </div>
-
-          <div className="lg:col-span-8 flex flex-col justify-center space-y-6">
-            <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-brandRed/10 border border-brandRed/20 rounded-lg">
-                <Zap size={12} className="text-brandRed" />
-                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-brandRed">{item.category}</span>
-              </div>
-              
-              <h1 className="text-5xl md:text-7xl font-black text-white italic uppercase tracking-tighter leading-none">
-                {item.name}
-              </h1>
-              
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 bg-zinc-900 px-3 py-1.5 rounded-xl border border-white/5">
-                    <span className="text-yellow-500 font-black text-sm">{avgRating.toFixed(1)}</span>
-                    <div className="flex items-center">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          onMouseEnter={() => setUserRating(star)}
-                          onMouseLeave={() => setUserRating(0)}
-                          onClick={() => setAvgRating((avgRating + star) / 2)}
-                          className="transition-transform hover:scale-110"
-                        >
-                          <Star 
-                            size={16} 
-                            fill={star <= (userRating || avgRating) ? "#EAB308" : "none"} 
-                            className={star <= (userRating || avgRating) ? "text-yellow-500" : "text-zinc-600"}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <span className="text-[9px] font-black uppercase text-zinc-500 tracking-widest italic">Rate this professional</span>
-                </div>
-
-                {/* UPDATED: INCREASED LOCATION SIZE AND VISIBILITY */}
-                <div className="flex items-center gap-4 text-zinc-100 font-black uppercase tracking-[0.3em] text-[12px] sm:text-sm">
-                    <MapPin size={18} className="text-brandRed" />
-                    {item.area}
-                </div>
-                {/* ADDED: OPERATING HOURS DISPLAY */}
-                {(item.openTime || item.closeTime) && (
-                  <div className="flex items-center gap-4 text-zinc-400 font-black uppercase tracking-[0.2em] text-[10px] sm:text-[11px] border-l-0 sm:border-l border-white/10 sm:pl-10">
-                      <Clock size={16} className="text-brandRed" />
-                      <span>{item.openTime} — {item.closeTime}</span>
-                  </div>
-                )}
-              </div>
+        <div className="bg-zinc-950/40 backdrop-blur-2xl border border-white/5 p-8 rounded-[40px] mb-10 shadow-3xl">
+          <div className="flex flex-col md:flex-row gap-10 justify-center items-center md:items-start">
+            <div className="w-32 h-32 md:w-44 md:h-44 relative rounded-[32px] overflow-hidden border border-white/10 bg-zinc-900 shadow-2xl shrink-0 transition-all duration-500 hover:scale-105">
+              <Image 
+                src={`https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${thumbnail}`}
+                alt={item.name} 
+                fill 
+                priority 
+                unoptimized 
+                className="object-cover"
+              />
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 w-full pt-2">
-              {/* 1. WHATSAPP BUTTON - Green & Full Width on Mobile */}
-              <a 
-                href={`https://wa.me/91${item.contact?.toString().replace(/\D/g,'')}`} 
-                target="_blank" 
-                className="w-full sm:flex-1 flex items-center justify-center gap-3 bg-[#25D366] text-white h-16 sm:h-20 rounded-2xl font-black uppercase text-[12px] sm:text-xs tracking-[0.2em] hover:bg-white hover:text-[#25D366] border border-[#25D366]/20 transition-all shadow-xl active:scale-95"
-              >
-                <MessageCircle size={22} fill="currentColor" /> 
-                <span>Chat on WhatsApp</span>
-              </a>
+            <div className="flex-1 space-y-6 w-full flex flex-col items-center text-center md:items-start md:text-left">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
+                <div className="space-y-2 flex flex-col items-center md:items-start w-full md:w-auto">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-brandRed/10 border border-brandRed/20 rounded-lg">
+                    <Zap size={12} className="text-brandRed" />
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-brandRed">{item.category}</span>
+                  </div>
+                  <h1 className="text-3xl md:text-4xl font-black text-white italic uppercase tracking-tighter leading-none flex items-center gap-2">
+                    {item.name} {item.isVerified && <ShieldCheck size={24} className="text-brandRed inline-block ml-2" />}
+                  </h1>
+                </div>
 
-              {/* 2. CALL BUTTON - Semi-transparent & Full Width on Mobile */}
-              <a 
-                href={`tel:${item.contact}`} 
-                className="w-full sm:w-auto sm:px-12 flex items-center justify-center gap-3 bg-zinc-900/50 backdrop-blur-md text-white h-16 sm:h-20 rounded-2xl font-black uppercase text-[12px] sm:text-xs tracking-[0.2em] border border-white/10 hover:border-brandRed transition-all active:scale-95"
-              >
-                <Phone size={20} /> 
-                <span>Call Now</span>
-              </a>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => handleLockedAction(`https://wa.me/91${item.contact}`)} className="p-4 bg-[#25D366]/10 text-[#25D366] rounded-2xl border border-[#25D366]/20 hover:bg-[#25D366] hover:text-white transition-all shadow-xl">
+                    <MessageCircle size={20} />
+                  </button>
+                  <button onClick={() => handleLockedAction(`tel:${item.contact}`)} className="p-4 bg-zinc-900 text-white rounded-2xl border border-white/10 hover:border-brandRed transition-all shadow-xl">
+                    <Phone size={20} />
+                  </button>
+                  <button onClick={() => navigator.share({title: item.name, url: window.location.href})} className="p-4 bg-zinc-900 text-white rounded-2xl border border-white/10 transition-all shadow-xl">
+                    <Share2 size={20} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4 flex flex-col items-center md:items-start w-full md:w-auto">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 w-full md:w-auto">
+                  <div className="flex items-center gap-2 text-zinc-100 font-black uppercase tracking-[0.2em] text-[11px]">
+                    <MapPin size={16} className="text-brandRed" />
+                    {item.area}
+                  </div>
+                  {(item.openTime || item.closeTime) && (
+                    <div className="flex items-center gap-2 text-zinc-500 font-black uppercase tracking-[0.2em] text-[10px]">
+                      <Clock size={16} className="text-brandRed" />
+                      <span>{item.openTime} — {item.closeTime}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1 bg-zinc-900 px-3 py-1 rounded-xl border border-white/5">
+                    <span className="text-yellow-500 font-black text-xs">{avgRating.toFixed(1)}</span>
+                    <Star size={12} fill="#EAB308" className="text-yellow-500" />
+                  </div>
+                </div>
+
+                <div className="relative max-w-3xl w-full">
+                  <p className={`text-zinc-400 text-base leading-relaxed italic md:border-l-2 border-brandRed/30 md:pl-6 whitespace-pre-wrap break-words ${!isUnlocked ? 'line-clamp-2' : ''}`}>
+                    {item.description}
+                  </p>
+                  {!isUnlocked && (
+                    <button onClick={() => handleLockedAction('', 'UNLOCK')} className="mt-3 text-brandRed font-black uppercase text-[10px] tracking-widest flex items-center justify-center md:justify-start gap-2 hover:gap-3 transition-all w-full md:w-auto">
+                      Read Full Profile <ChevronRight size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* --- OWNER VERIFICATION TRIGGER --- */}
         {currentUser?.email === item.userEmail && !item.isVerified && item.verificationStatus !== 'PENDING' && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-10 p-6 md:p-8 rounded-[40px] bg-brandRed/10 border border-brandRed/20 backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brandRed/10 blur-[80px] pointer-events-none" />
-            <div className="flex items-center gap-6 relative z-10">
-              <div className="p-4 bg-brandRed rounded-[24px] shadow-[0_0_30px_rgba(255,0,0,0.4)] flex items-center justify-center shrink-0">
-                <ShieldCheck className="text-white" size={32} />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-sm font-black uppercase tracking-widest text-white italic">
-                  Trust Protocol <span className="text-brandRed">Required</span>
-                </h4>
-                <p className="text-[14px] font-bold text-zinc-400 uppercase tracking-tighter leading-tight max-w-md">
-                  Initialize your business audit by uploading your Shop Act and Identity documents to earn the verified badge.
-                </p>
-              </div>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-10 p-6 rounded-[32px] bg-brandRed/10 border border-brandRed/20 backdrop-blur-xl flex items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <ShieldCheck className="text-brandRed" size={28} />
+              <p className="text-[10px] font-black uppercase tracking-widest text-white italic">Identity Verification Required for Badge</p>
             </div>
-            
-            <button 
-              onClick={() => setIsVerifyOpen(true)}
-              className="w-full md:w-auto px-10 py-4 bg-white text-black text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-brandRed hover:text-white transition-all active:scale-95 shadow-2xl relative z-10"
-            >
-              Initialize Audit
-            </button>
+            <button onClick={() => setIsVerifyOpen(true)} className="px-8 py-3 bg-white text-black text-[10px] font-black uppercase rounded-xl hover:bg-brandRed hover:text-white transition-all">Verify Now</button>
           </motion.div>
         )}
 
-        {/* --- PENDING STATUS INDICATOR --- */}
-        {currentUser?.email === item.userEmail && item.verificationStatus === 'PENDING' && (
-          <div className="mb-10 p-6 rounded-[32px] bg-zinc-900/50 border border-amber-500/20 flex items-center gap-4">
-            <Clock className="text-amber-500 animate-pulse" size={20} />
-            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
-              Audit in Progress // Document verification is currently being processed by the Tribe Moderator.
-            </span>
-          </div>
-        )}
+        <div className="relative" ref={paywallRef}>
+          {!isUnlocked && (
+<div className="absolute inset-x-0 -top-10 bottom-0 z-[60] flex flex-col items-center justify-start pt-16 sm:pt-32 p-6 md:p-10">              <div className="absolute inset-0 bg-[#030303]/70 backdrop-blur-2xl rounded-[50px] border border-white/5 shadow-3xl" />
+              <div className="relative z-10 text-center space-y-8 w-full max-w-sm mx-auto">
+                <div className="w-20 h-20 bg-brandRed/10 rounded-full flex items-center justify-center mx-auto border border-brandRed/20 shadow-[0_0_50px_rgba(255,0,0,0.2)]">
+                  <Lock size={32} className="text-brandRed animate-pulse" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-3xl font-black uppercase italic text-white tracking-tighter">Profile Restricted</h3>
+                  <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-[0.3em]">Unlock to view Services, Portfolio & Map location</p>
+                </div>
 
-        {/* TAB BAR */}
-        <div className="sticky top-[100px] z-[40] mb-12 bg-black/60 backdrop-blur-xl border-y border-white/5 mx-[-1.5rem] px-6">
-          <div className="flex items-center gap-8 overflow-x-auto no-scrollbar py-4">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => scrollToSection(tab.ref, tab.id)}
-                className={`flex items-center gap-2 whitespace-nowrap text-[10px] font-black uppercase tracking-[0.2em] transition-all relative py-2 ${
-                  activeTab === tab.id ? 'text-brandRed' : 'text-zinc-500 hover:text-white'
-                }`}
-              >
-                <tab.icon size={14} />
-                {tab.label}
-                {activeTab === tab.id && (
-                  <motion.div layoutId="activeTabUnderline" className="absolute -bottom-4 left-0 right-0 h-1 bg-brandRed shadow-[0_0_10px_#FF0000]" />
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-          <div className="lg:col-span-8 space-y-16">
-            
-            {/* Overview Section */}
-            <section ref={overviewRef} className="bg-zinc-950/40 backdrop-blur-md border border-white/5 p-10 rounded-[40px] space-y-6 scroll-mt-24">
-              <h2 className="text-xs font-black text-white uppercase tracking-[0.3em] flex items-center gap-3">
-                <div className="w-10 h-px bg-brandRed/50" />
-                Company Profile
-              </h2>
-              <p className="text-zinc-300 text-lg leading-relaxed italic border-l-2 border-brandRed/30 pl-8 whitespace-pre-wrap break-words">
-                {item.description}
-              </p>
-            </section>
-
-            {/* Services Section */}
-            {item.services && item.services.length > 0 && (
-              <section ref={servicesRef} className="space-y-8 scroll-mt-24">
-                <h2 className="text-xs font-black text-white uppercase tracking-[0.3em] flex items-center gap-3">
-                  <div className="w-10 h-px bg-brandRed/50" />
-                  Services Offered
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {item.services.map((service: any, idx: number) => (
-                    <div key={idx} className="bg-zinc-900/50 p-6 rounded-3xl border border-white/5 group hover:border-brandRed/30 transition-all">
-                      <div className="flex items-start gap-4">
-                        <div className="w-8 h-8 rounded-full bg-brandRed/10 flex items-center justify-center text-brandRed font-black text-[10px] shrink-0">
-                          {idx + 1}
+                {isPaymentEnabled && martPlans && (
+                  <div className="space-y-3 text-left w-full pt-4">
+                    {/* 🔥 UPDATED: Added onClick to DIVs instead of labels so state actually updates! */}
+                    {martPlans.monthly.active && (
+                      <div onClick={() => setSelectedPlan('monthly')} className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${selectedPlan === 'monthly' ? 'border-brandRed bg-brandRed/10 shadow-[0_0_15px_rgba(255,0,0,0.2)]' : 'border-white/10 bg-black/50 hover:border-white/30'}`}>
+                        <div className="flex items-center gap-4">
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedPlan === 'monthly' ? 'border-brandRed' : 'border-zinc-500'}`}>
+                            {selectedPlan === 'monthly' && <div className="w-2 h-2 rounded-full bg-brandRed" />}
+                          </div>
+                          <span className="text-xs font-black uppercase tracking-widest text-white">Monthly Access</span>
                         </div>
-                        <div className="space-y-1">
-                          <h4 className="text-sm font-black uppercase text-white tracking-tight">{service.name}</h4>
-                          <p className="text-[13px] text-zinc-100 leading-relaxed italic">{service.desc}</p>
-                        </div>
+                        <span className="text-lg font-black italic text-white">₹{martPlans.monthly.price}</span>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Photo Gallery */}
-            {gallery.length > 0 && (
-              <section ref={photosRef} className="space-y-8 scroll-mt-24">
-                <h2 className="text-xs font-black text-white uppercase tracking-[0.3em] flex items-center gap-3">
-                  <div className="w-10 h-px bg-brandRed/50" />
-                  Portfolio Gallery
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {gallery.map((img: string, idx: number) => (
-                    <div 
-                      key={idx} 
-                      onClick={() => setZoomImage(`https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${img}`)}
-                      className="relative aspect-square rounded-[30px] border border-white/10 cursor-zoom-in group bg-zinc-900"
-                    >
-                      <Image src={`https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${img}`} alt="Work" fill unoptimized className="object-cover opacity-90 rounded-[30px] group-hover:opacity-100 transition-all duration-700" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 rounded-[30px] group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Maximize2 size={24} className="text-white" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-          </div>
-
-          {/* STICKY SIDEBAR */}
-          <aside className="lg:col-span-4 sticky top-44">
-            <div className="bg-zinc-950 border border-white/10 p-10 rounded-[45px] space-y-10 shadow-3xl">
-              <div className="space-y-8">
-                <div className="flex gap-5">
-                  <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 text-brandRed">
-                    <MapPin size={24} />
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Location</p>
-                    <p className="text-sm text-zinc-200 font-bold uppercase">{item.area}</p>
-                    {item.mapUrl && <a href={item.mapUrl} target="_blank" className="text-[10px] text-brandRed font-black mt-3 inline-flex items-center gap-1 hover:underline tracking-widest uppercase">Navigation Link <ExternalLink size={12} /></a>}
-                  </div>
-                </div>
-
-                <div className="flex gap-5">
-                  <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 text-brandRed">
-                    <Globe size={24} />
-                  </div>
-                  <div className="flex flex-col gap-2 flex-1">
-                    <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Web Protocol</p>
-                    {item.website && (
-                      <a 
-                        href={item.website} 
-                        target="_blank" 
-                        className="text-xs text-zinc-200 font-bold break-all hover:text-brandRed transition-colors flex items-center gap-2"
-                      >
-                        {item.website.replace(/^https?:\/\//, '')} 
-                        <ExternalLink size={12} />
-                      </a>
                     )}
-                    <div className="flex flex-wrap gap-4 items-center mt-2">
-                      {item.instagram && <a href={`https://instagram.com/${item.instagram}`} target="_blank" className="text-zinc-400 hover:text-brandRed transition-colors scale-125"><Instagram size={24} /></a>}
-                    </div>
+                    {martPlans.yearly.active && (
+                      <div onClick={() => setSelectedPlan('yearly')} className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${selectedPlan === 'yearly' ? 'border-brandRed bg-brandRed/10 shadow-[0_0_15px_rgba(255,0,0,0.2)]' : 'border-white/10 bg-black/50 hover:border-white/30'}`}>
+                        <div className="flex items-center gap-4">
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedPlan === 'yearly' ? 'border-brandRed' : 'border-zinc-500'}`}>
+                            {selectedPlan === 'yearly' && <div className="w-2 h-2 rounded-full bg-brandRed" />}
+                          </div>
+                          <span className="text-xs font-black uppercase tracking-widest text-white">Yearly Access</span>
+                        </div>
+                        <span className="text-lg font-black italic text-white">₹{martPlans.yearly.price}</span>
+                      </div>
+                    )}
+                    {martPlans.lifetime.active && (
+                      <div onClick={() => setSelectedPlan('lifetime')} className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${selectedPlan === 'lifetime' ? 'border-brandRed bg-brandRed/10 shadow-[0_0_15px_rgba(255,0,0,0.2)]' : 'border-white/10 bg-black/50 hover:border-white/30'}`}>
+                        <div className="flex items-center gap-4">
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${selectedPlan === 'lifetime' ? 'border-brandRed' : 'border-zinc-500'}`}>
+                            {selectedPlan === 'lifetime' && <div className="w-2 h-2 rounded-full bg-brandRed" />}
+                          </div>
+                          <span className="text-xs font-black uppercase tracking-widest text-white">Lifetime Access</span>
+                        </div>
+                        <span className="text-lg font-black italic text-white">₹{martPlans.lifetime.price}</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-
-                {item.buttonText && item.buttonUrl && (
-                  <a href={item.buttonUrl} target="_blank" className="flex items-center justify-center bg-brandRed text-white w-full py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-lg hover:scale-105 transition-all">
-                    {item.buttonText}
-                  </a>
                 )}
+
+                {/* 🔥 UPDATED: This button now triggers the confirm modal based on the selected plan */}
+                <button 
+                  onClick={() => {
+                    if (isPaymentEnabled) {
+                      if (!selectedPlan) {
+                        setAlertConfig({ isVisible: true, message: "Please select an access plan.", type: 'error' });
+                        return;
+                      }
+                      setConfirmOpen(true);
+                    } else {
+                      setIsUnlocked(true);
+                    }
+                  }} 
+                  className="w-full px-12 py-5 bg-brandRed text-white font-black uppercase text-xs tracking-[0.2em] rounded-2xl hover:bg-white hover:text-black transition-all shadow-[0_20px_40px_rgba(255,0,0,0.3)] active:scale-95"
+                >
+                  {isPaymentEnabled ? 'Authorize Payment' : 'View More & Contact'}
+                </button>
               </div>
             </div>
-          </aside>
+          )}
+
+          <div className={!isUnlocked ? "opacity-10 pointer-events-none select-none blur-xl" : "space-y-20 transition-all duration-1000"}>
+            <div className="sticky top-[100px] z-[40] mb-12 bg-black/60 backdrop-blur-xl border-y border-white/5 mx-[-1.5rem] px-6">
+              <div className="flex items-center gap-8 overflow-x-auto no-scrollbar py-4">
+                {tabs.map((tab) => (
+                  <button key={tab.id} onClick={() => scrollToSection(tab.ref, tab.id)} className={`flex items-center gap-2 whitespace-nowrap text-[10px] font-black uppercase tracking-[0.2em] transition-all relative py-2 ${activeTab === tab.id ? 'text-brandRed' : 'text-zinc-500 hover:text-white'}`}>
+                    <tab.icon size={14} /> {tab.label}
+                    {activeTab === tab.id && <motion.div layoutId="activeTabUnderline" className="absolute -bottom-4 left-0 right-0 h-1 bg-brandRed shadow-[0_0_10px_#FF0000]" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
+              <div className="lg:col-span-8 space-y-20">
+                {item.services && item.services.length > 0 && (
+                  <section ref={servicesRef} className="scroll-mt-44 space-y-10">
+                    <h2 className="text-xs font-black text-white uppercase tracking-[0.4em] flex items-center gap-4"><div className="w-12 h-px bg-brandRed" /> Services Offered</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {item.services.map((service: any, idx: number) => (
+                        <div key={idx} className="bg-zinc-900/40 p-8 rounded-[32px] border border-white/5 hover:border-brandRed/30 transition-all group">
+                          <div className="flex items-start gap-5">
+                            <div className="w-10 h-10 rounded-full bg-brandRed/10 flex items-center justify-center text-brandRed font-black text-xs shrink-0 border border-brandRed/20">{idx + 1}</div>
+                            <div className="space-y-2">
+                              <h4 className="text-lg font-black uppercase text-white tracking-tight">{service.name}</h4>
+                              <p className="text-sm text-zinc-500 leading-relaxed italic">{service.desc}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {gallery.length > 0 && (
+                  <section ref={photosRef} className="scroll-mt-44 space-y-10">
+                    <h2 className="text-xs font-black text-white uppercase tracking-[0.4em] flex items-center gap-4"><div className="w-12 h-px bg-brandRed" /> Portfolio Gallery</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                      {gallery.map((img: string, idx: number) => (
+                        <div key={idx} onClick={() => setZoomImage(`https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${img}`)} className="relative aspect-square rounded-[32px] overflow-hidden border border-white/10 bg-zinc-900 cursor-zoom-in group">
+                          <Image src={`https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${img}`} alt="Gallery" fill unoptimized className="object-cover transition-transform duration-700 group-hover:scale-110" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><Maximize2 size={24} className="text-white" /></div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
+
+              <aside className="lg:col-span-4 sticky top-44 space-y-8">
+                <div className="bg-zinc-950 border border-white/10 p-10 rounded-[45px] space-y-10 shadow-3xl">
+                  <div className="space-y-8">
+                    <div className="flex gap-6">
+                      <div className="w-14 h-14 bg-zinc-900 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 text-brandRed"><MapPin size={28} /></div>
+                      <div>
+                        <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-1">Navigation Protocol</p>
+                        <p className="text-sm text-zinc-200 font-bold uppercase">{item.area}</p>
+                        {item.mapUrl && <button onClick={() => handleLockedAction(item.mapUrl)} className="text-[10px] text-brandRed font-black mt-3 inline-flex items-center gap-2 hover:underline tracking-widest uppercase">Maps Link <ExternalLink size={14} /></button>}
+                      </div>
+                    </div>
+                    <div className="flex gap-6">
+                      <div className="w-14 h-14 bg-zinc-900 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 text-brandRed"><Globe size={28} /></div>
+                      <div className="flex-1">
+                        <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-1">Web Presence</p>
+                        {item.website && <button onClick={() => handleLockedAction(item.website)} className="text-xs text-zinc-200 font-bold break-all hover:text-brandRed transition-colors flex items-center gap-2">{item.website.replace(/^https?:\/\//, '')} <ExternalLink size={14} /></button>}
+                        <div className="flex gap-4 mt-4">{item.instagram && <button onClick={() => handleLockedAction(`https://instagram.com/${item.instagram}`)} className="text-zinc-500 hover:text-brandRed transition-colors"><Instagram size={24} /></button>}</div>
+                      </div>
+                    </div>
+                    {item.buttonText && item.buttonUrl && (
+                      <button onClick={() => handleLockedAction(item.buttonUrl)} className="flex items-center justify-center bg-brandRed text-white w-full py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-lg hover:scale-105 transition-all">{item.buttonText}</button>
+                    )}
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </div>
         </div>
       </main>
 
-      {/* LIGHTBOX OVERLAY */}
       <AnimatePresence>
         {zoomImage && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setZoomImage(null)} className="fixed inset-0 z-[1000] bg-black/98 flex items-center justify-center p-8 cursor-zoom-out">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setZoomImage(null)} className="fixed inset-0 z-[1000] bg-black/98 flex items-center justify-center p-8">
             <div className="relative w-full max-w-6xl h-full flex items-center justify-center"><Image src={zoomImage} alt="Zoomed" fill unoptimized className="object-contain" /></div>
             <button className="absolute top-10 right-10 text-white p-4 bg-zinc-900 rounded-full hover:bg-brandRed transition-all"><X size={32} /></button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <MartVerificationModal 
-        isOpen={isVerifyOpen}
-        onClose={() => setIsVerifyOpen(false)}
-        businessId={item._id}
-        businessName={item.name}
-        userEmail={currentUser?.email || ''}
-      />
+      <MartVerificationModal isOpen={isVerifyOpen} onClose={() => setIsVerifyOpen(false)} businessId={item._id} businessName={item.name} userEmail={currentUser?.email || ''} />
     </div>
   );
 }
