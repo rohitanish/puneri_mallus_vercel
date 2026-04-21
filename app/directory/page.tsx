@@ -198,7 +198,7 @@ export default function MalluMartPage() {
             <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-600 pointer-events-none" size={16} />
           </div>
         </div>
-              <TribeDisclaimer type="MART" />
+              
         {filteredItems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-32">
             {filteredItems.map((item) => (
@@ -295,6 +295,7 @@ export default function MalluMartPage() {
         )}
 
         <div className="text-center mt-20">
+          <TribeDisclaimer type="MART" />
           <LaserDivider />
           <div className="flex items-center justify-center gap-12 mt-12 opacity-30 text-[10px] font-black uppercase tracking-[0.5em]">
             <div className="flex items-center gap-3"><Users size={16} /> {filteredItems.length} Partners</div>

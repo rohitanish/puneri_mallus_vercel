@@ -1,14 +1,21 @@
 "use client";
-import { useEffect, useState, useRef, useMemo } from 'react'; // Added useMemo
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { 
   User, Mail, Lock, Camera, Check, AlertCircle, 
-  Loader2, Shield, Trash2, MapPin, Phone, Briefcase, Calendar, AlertTriangle
+  Loader2, Shield, Trash2, MapPin, Phone, Briefcase, 
+  Calendar, AlertTriangle, CheckCircle2, Smartphone
 } from 'lucide-react';
 import TribeCalendar from '@/components/ui/TribeCalendar';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
+
+// 🔥 FIREBASE IMPORTS FOR OTP
+import { auth } from '@/lib/firebase';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
+
+const DEV_MODE_PHONE = false; 
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -20,11 +27,22 @@ export default function ProfilePage() {
   // FORM STATES
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [originalEmail, setOriginalEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [originalPhone, setOriginalPhone] = useState('');
   const [profession, setProfession] = useState('');
   const [location, setLocation] = useState('');
   const [dob, setDob] = useState('');
   const [newPassword, setNewPassword] = useState('');
+
+  // PHONE OTP STATES
+  const [otp, setOtp] = useState('');
+  const [showOtpField, setShowOtpField] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(true); // Default true for existing phone
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [timer, setTimer] = useState(0);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
 
   // DELETE STATES
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -36,7 +54,7 @@ export default function ProfilePage() {
   const [showCalendar, setShowCalendar] = useState(false);
   const dateContainerRef = useRef<HTMLDivElement>(null);
 
-  // --- AGE LOGIC START ---
+  // --- AGE LOGIC ---
   const maxDobDate = useMemo(() => {
     const date = new Date();
     date.setFullYear(date.getFullYear() - 16);
@@ -52,7 +70,8 @@ export default function ProfilePage() {
     if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
     return age >= 16;
   }, [dob]);
-  // --- AGE LOGIC END ---
+
+  const isPhoneValid = useMemo(() => phone.length === 10, [phone]);
 
   const PUNE_AREAS = [
     "Pune", "Shivajinagar", "Kothrud", "Karve Nagar", "Erandwane", "Deccan", 
@@ -74,6 +93,30 @@ export default function ProfilePage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
+  // --- PRE-WARM RECAPTCHA ---
+  useEffect(() => {
+    // 🔥 FIX: Added !loading check so it waits for the DOM to actually exist
+    if (!loading && typeof window !== "undefined" && !recaptchaVerifierRef.current) {
+      recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible'
+      });
+    }
+    
+    return () => {
+      if (recaptchaVerifierRef.current) {
+        recaptchaVerifierRef.current.clear();
+        recaptchaVerifierRef.current = null;
+      }
+    };
+  }, [loading]); // 🔥 FIX: Added loading to the dependency array
+
+  // --- TIMER EFFECT ---
+  useEffect(() => {
+    let interval: any;
+    if (timer > 0) interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
+    return () => clearInterval(interval);
+  }, [timer]);
+
   const fetchUserData = async () => {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
@@ -83,9 +126,16 @@ export default function ProfilePage() {
       }
       setUser(user);
       const meta = user.user_metadata;
+      
       setFullName(meta?.full_name || '');
       setEmail(user.email || '');
-      setPhone(user.phone?.replace('+91', '') || '');
+      setOriginalEmail(user.email || '');
+      
+      const rawPhone = user.phone || meta?.phone || '';
+      const formattedPhone = rawPhone.replace('+91', '') || '';
+      setPhone(formattedPhone);
+      setOriginalPhone(formattedPhone);
+      
       setProfession(meta?.profession || '');
       setLocation(meta?.location || '');
       setDob(meta?.dob || '');
@@ -105,70 +155,129 @@ export default function ProfilePage() {
     setShowCalendar(false);
   };
 
+  // --- FIREBASE OTP LOGIC ---
+  const sendPhoneOtp = async () => {
+    if (!isPhoneValid || timer > 0 || otpLoading) return;
+    setOtpLoading(true);
+    setMessage({ type: 'info', text: "INITIALIZING SECURITY GATEWAY..." }); 
+    try {
+      if (DEV_MODE_PHONE) {
+        await new Promise(res => setTimeout(res, 800));
+        setShowOtpField(true);
+        setTimer(60);
+        setMessage({ type: 'info', text: "DEBUG MODE: USE CODE 123456" });
+        setOtpLoading(false);
+        return;
+      }
+
+      if (!recaptchaVerifierRef.current) {
+        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
+      }
+      
+      const phoneNumber = `+91${phone}`;
+      const confirmation = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifierRef.current);
+      setConfirmationResult(confirmation);
+      setShowOtpField(true);
+      setTimer(60);
+      setMessage({ type: 'success', text: "VERIFICATION CODE SENT." });
+    } catch (error: any) {
+      if (recaptchaVerifierRef.current) {
+        recaptchaVerifierRef.current.clear();
+        recaptchaVerifierRef.current = null;
+      }
+      setMessage({ type: 'error', text: "GATEWAY ERROR. PLEASE RETRY." });
+      setTimer(0);
+    } finally { setOtpLoading(false); }
+  };
+
+  const verifyPhoneOtp = async () => {
+    if (!otp || otpLoading) return;
+    setOtpLoading(true);
+    try {
+      if (DEV_MODE_PHONE) {
+        if (otp === "123456") {
+          setIsPhoneVerified(true);
+          setShowOtpField(false);
+          setMessage({ type: 'success', text: "PHONE VERIFIED SUCCESSFULLY" });
+        } else { setMessage({ type: 'error', text: "INVALID CODE." }); }
+      } else {
+        if (!confirmationResult) throw new Error("Session Expired");
+        await confirmationResult.confirm(otp);
+        setIsPhoneVerified(true);
+        setShowOtpField(false);
+        setMessage({ type: 'success', text: "PHONE VERIFIED SUCCESSFULLY" });
+      }
+    } catch (error) { 
+      setMessage({ type: 'error', text: "INVALID OTP. PLEASE CHECK AGAIN." });
+    } finally { setOtpLoading(false); }
+  };
+
+  // --- PROFILE UPDATE LOGIC ---
   const handleUpdateProfile = async () => {
     if (dob && !isAdult) {
       setMessage({ type: 'error', text: 'UPDATE DENIED: YOU MUST BE 16 OR OLDER.' });
       return;
     }
 
+    if (!isPhoneVerified) {
+      setMessage({ type: 'error', text: 'PLEASE VERIFY YOUR NEW PHONE NUMBER.' });
+      return;
+    }
+
     setUpdating(true);
     setMessage({ type: '', text: '' });
-    const isEmailChanged = email !== user.email;
+    const isEmailChanged = email !== originalEmail;
+    const isPhoneChanged = phone !== originalPhone;
+
+    // Build metadata payload
+    let updatedData: any = {
+      full_name: fullName.toUpperCase(),
+      profession: profession.toUpperCase(),
+      location: location,
+      dob: dob,
+    };
+
+    // If phone changed, update metadata
+    if (isPhoneChanged) {
+      updatedData.phone = `+91${phone}`;
+    }
 
     const { error } = await supabase.auth.updateUser({
       email: isEmailChanged ? email : undefined,
-      data: {
-        full_name: fullName.toUpperCase(),
-        profession: profession.toUpperCase(),
-        location: location,
-        dob: dob,
-      }
+      data: updatedData
     });
 
     if (error) {
       setMessage({ type: 'error', text: error.message.toUpperCase() });
     } else {
       if (isEmailChanged) {
-        setMessage({ type: 'success', text: 'EMAIL UPDATED. VERIFY NEW EMAIL & LOGIN AGAIN.' });
-        setTimeout(async () => {
-          await supabase.auth.signOut();
-          router.push('/auth/login');
-        }, 3000);
+        setMessage({ type: 'success', text: 'UPDATE INITIATED. PLEASE CHECK YOUR NEW EMAIL INBOX FOR A VERIFICATION LINK.' });
       } else {
-        setMessage({ type: 'success', text: 'TRIBE RECORDS UPDATED!' });
+        setMessage({ type: 'success', text: 'TRIBE RECORDS UPDATED SUCCESSFULLY!' });
+        if (isPhoneChanged) setOriginalPhone(phone); // Update local truth
       }
     }
     setUpdating(false);
   };
 
+  // --- AVATAR & ACCOUNT DELETION LOGIC (Unchanged) ---
   const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
       if (!event.target.files || event.target.files.length === 0) return;
-      
       const oldUrl = user?.user_metadata?.avatar_url;
       if (oldUrl && oldUrl.includes('/avatars/')) {
         const oldPath = oldUrl.split('/avatars/')[1].split('?')[0]; 
         if (oldPath) await supabase.storage.from('avatars').remove([oldPath]);
       }
-
       const file = event.target.files[0];
       const filePath = `${user.id}/avatar-${Date.now()}.${file.name.split('.').pop()}`;
       await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
-
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
       await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
-      
-      setUser((prev: any) => ({
-        ...prev,
-        user_metadata: { ...prev.user_metadata, avatar_url: publicUrl }
-      }));
+      setUser((prev: any) => ({ ...prev, user_metadata: { ...prev.user_metadata, avatar_url: publicUrl } }));
       setMessage({ type: 'success', text: 'PORTRAIT UPDATED!' });
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message });
-    } finally {
-      setUploading(false);
-    }
+    } catch (error: any) { setMessage({ type: 'error', text: error.message }); } finally { setUploading(false); }
   };
 
   const deleteAvatar = async () => {
@@ -182,47 +291,27 @@ export default function ProfilePage() {
       await supabase.auth.updateUser({ data: { avatar_url: null } });
       setUser((prev: any) => ({...prev, user_metadata: { ...prev.user_metadata, avatar_url: null }}));
       setMessage({ type: 'success', text: 'PORTRAIT REMOVED.' });
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message });
-    } finally {
-      setUploading(false);
-    }
+    } catch (error: any) { setMessage({ type: 'error', text: error.message }); } finally { setUploading(false); }
   };
 
   const handleDeleteAccount = async () => {
     if (!confirmPassword) return;
     setIsPurging(true);
-    
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: confirmPassword
-    });
-
+    const { error: authError } = await supabase.auth.signInWithPassword({ email: user.email, password: confirmPassword });
     if (authError) {
       setMessage({ type: 'error', text: 'INVALID PASSWORD. PURGE DENIED.' });
-      setIsPurging(false);
-      return;
+      setIsPurging(false); return;
     }
-
     try {
       const url = user?.user_metadata?.avatar_url;
       if (url && url.includes('/avatars/')) {
         const path = url.split('/avatars/')[1].split('?')[0];
         await supabase.storage.from('avatars').remove([path]);
       }
-
       const res = await fetch(`/api/profile/delete?id=${user.id}`, { method: 'DELETE' });
-      if (res.ok) {
-        await supabase.auth.signOut();
-        router.push('/farewell');
-      } else {
-        setMessage({ type: 'error', text: 'DATABASE PURGE FAILED.' });
-        setIsPurging(false);
-      }
-    } catch (err) {
-      setMessage({ type: 'error', text: 'SYSTEM ERROR DURING PURGE.' });
-      setIsPurging(false);
-    }
+      if (res.ok) { await supabase.auth.signOut(); router.push('/farewell'); } 
+      else { setMessage({ type: 'error', text: 'DATABASE PURGE FAILED.' }); setIsPurging(false); }
+    } catch (err) { setMessage({ type: 'error', text: 'SYSTEM ERROR DURING PURGE.' }); setIsPurging(false); }
   };
 
   if (loading) return (
@@ -235,6 +324,10 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-black text-white pt-32 pb-32 px-6 relative overflow-hidden">
       
+      {/* Hidden Recaptcha for Firebase Auth */}
+      <div id="recaptcha-container" className="hidden"></div>
+      <style jsx global>{` .grecaptcha-badge { visibility: hidden !important; } `}</style>
+
       <div className="absolute inset-0 z-0">
         <Image src="/events/signup.jpg" alt="BG" fill className="object-cover opacity-40" priority />
         <div className="absolute inset-0 bg-black/60" />
@@ -303,8 +396,8 @@ export default function ProfilePage() {
         </div>
 
         {message.text && (
-          <div className={`mb-8 p-5 rounded-2xl flex items-center gap-3 font-black uppercase text-[10px] tracking-widest border animate-in fade-in slide-in-from-top-4 ${message.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-brandRed/10 text-brandRed border-brandRed/20'}`}>
-            {message.type === 'success' ? <Check size={18} /> : <AlertCircle size={18} />}
+          <div className={`mb-8 p-5 rounded-2xl flex items-center gap-3 font-black uppercase text-[10px] tracking-widest border animate-in fade-in slide-in-from-top-4 ${message.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' : message.type === 'info' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-brandRed/10 text-brandRed border-brandRed/20'}`}>
+            {message.type === 'success' ? <Check size={18} /> : message.type === 'info' ? <Loader2 size={18} className="animate-spin" /> : <AlertCircle size={18} />}
             {message.text}
           </div>
         )}
@@ -323,14 +416,59 @@ export default function ProfilePage() {
             <div className="space-y-1.5">
               <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-2">Email Address</label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-black/40 border border-white/10 p-5 rounded-2xl font-bold outline-none focus:border-brandRed transition-all text-sm text-white" />
+              {email !== originalEmail && (
+                 <p className="text-[8px] font-black uppercase text-amber-500 tracking-widest ml-4 mt-2">
+                   Changing email requires inbox verification.
+                 </p>
+              )}
             </div>
 
+            {/* 🔥 UPDATED PHONE FIELD (Unlocked & Validated) */}
             <div className="space-y-1.5">
-              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-2">Phone (Locked)</label>
-              <div className="relative">
-                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-white/10" size={14} />
-                <input type="text" disabled value={phone} className="w-full bg-zinc-900/30 border border-white/5 p-5 pl-11 rounded-2xl font-bold text-sm text-zinc-600 cursor-not-allowed" />
+              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-2">Phone Number</label>
+              <div className="relative flex items-center group">
+                <Phone className="absolute left-4 text-zinc-500" size={14} />
+                <input 
+                  type="tel" 
+                  placeholder="PHONE NUMBER" 
+                  maxLength={10} 
+                  disabled={otpLoading} 
+                  className={`w-full bg-black/40 border p-5 pl-11 rounded-2xl font-bold text-sm outline-none text-white border-white/10 placeholder:text-zinc-500 transition-all ${isPhoneVerified ? 'border-green-500/50 bg-green-500/5' : 'focus:border-brandRed'}`}
+                  value={phone} 
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setPhone(val);
+                    if (val === originalPhone) {
+                      setIsPhoneVerified(true);
+                    } else if (isPhoneVerified) {
+                      setIsPhoneVerified(false);
+                    }
+                    if (showOtpField) setShowOtpField(false);
+                    setTimer(0); 
+                    setConfirmationResult(null);
+                  }}
+                />
+                {!isPhoneVerified && isPhoneValid && (
+                  <button type="button" onClick={sendPhoneOtp} disabled={timer > 0 || otpLoading} className="absolute right-3 px-4 py-2 bg-brandRed text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-white hover:text-black transition-all disabled:opacity-50 flex items-center gap-2">
+                    {otpLoading ? <Loader2 size={12} className="animate-spin" /> : null}
+                    {timer > 0 ? `WAIT ${timer}s` : "VERIFY"}
+                  </button>
+                )}
+                {isPhoneVerified && <CheckCircle2 className="absolute right-5 text-green-500" size={18} />}
               </div>
+
+              {/* OTP Field UI */}
+              <AnimatePresence>
+                {showOtpField && !isPhoneVerified && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="relative flex items-center mt-2 overflow-hidden">
+                    <Smartphone className="absolute left-4 text-brandRed" size={14} />
+                    <input type="text" placeholder="ENTER 6-DIGIT OTP" maxLength={6} disabled={otpLoading} className="w-full bg-brandRed/10 border border-brandRed/30 p-5 pl-11 pr-24 rounded-xl font-black text-[12px] tracking-[0.3em] outline-none text-white placeholder:text-zinc-500" value={otp} onChange={(e) => setOtp(e.target.value)} />
+                    <button type="button" onClick={verifyPhoneOtp} disabled={otpLoading || otp.length < 6} className="absolute right-2 px-4 py-2 bg-white text-black text-[10px] uppercase font-black tracking-widest rounded-lg transition-all hover:bg-zinc-200">
+                      {otpLoading ? <Loader2 size={12} className="animate-spin" /> : "SUBMIT"}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             <div className="space-y-1.5">
@@ -379,14 +517,13 @@ export default function ProfilePage() {
                         onChange={handleDateSelect} 
                         onClose={() => setShowCalendar(false)}
                         anchorRef={dateContainerRef}
-                        maxDate={maxDobDate} // Restricted to 16+ years
+                        maxDate={maxDobDate} 
                       />
                     </>
                   )}
                 </AnimatePresence>
               </div>
               
-              {/* WARNING TEXT */}
               {!isAdult && dob && (
                 <p className="text-[8px] font-black uppercase text-brandRed tracking-widest ml-4 mt-2 animate-pulse">
                   Restriction: Membership requires age 16+
@@ -397,7 +534,7 @@ export default function ProfilePage() {
 
           <button 
             onClick={handleUpdateProfile} 
-            disabled={updating || (!isAdult && dob ? true : false)}
+            disabled={updating || (!isAdult && dob ? true : false) || !isPhoneVerified}
             className="w-full mt-12 py-6 bg-brandRed text-white font-black uppercase tracking-[0.4em] rounded-3xl hover:bg-white hover:text-black transition-all shadow-xl active:scale-[0.98] text-[12px] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {updating ? 'SYNCING DATA...' : 'Update Profile'}

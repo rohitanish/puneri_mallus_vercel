@@ -166,11 +166,17 @@ export default function ProfessionalDetailsPage() {
         name: "PUNERI MALLUS",
         description: `Unlock Mallu Mart Access (${selectedPlan.toUpperCase()})`,
         order_id: orderData.id,
+        method: {
+    netbanking: true,
+    card: true,
+    upi: true,
+    wallet: true,
+    emi: false,      // Explicitly disabled
+    paylater: false  // Explicitly disabled
+  },
         config: {
           display: {
-            blocks: {
-              banks: { name: 'Pay via UPI / QR', instruments: [{ method: 'upi' }] },
-            },
+           
             sequence: ['block.banks', 'block.cards'],
             preferences: { show_default_blocks: true },
           },

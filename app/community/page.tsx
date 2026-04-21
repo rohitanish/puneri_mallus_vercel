@@ -12,6 +12,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import TribeAlert from '@/components/TribeAlert'; 
 import TribeConfirm from '@/components/TribeConfirm';
 import TribeDisclaimer from '@/components/TribeDisclaimer';
+
 const EXTERNAL_CATEGORIES = ["SAMAJAM", "TEMPLE", "CHURCH", "ORGANIZATION"];
 const TABS = [
     { id: "ALL", label: "All Circles" },
@@ -47,9 +48,11 @@ export default function CommunityPage() {
   message: '',
   type: 'info' as 'success' | 'error' | 'info'
 });
+
 const triggerToast = (message: string, type: 'success' | 'error' | 'info') => {
   setAlertConfig({ isVisible: true, message, type });
 };
+
 const handleDelete = async () => {
   if (!deleteId || !currentUser?.email) return;
   setConfirmOpen(false);
@@ -58,7 +61,6 @@ const handleDelete = async () => {
     const res = await fetch('/api/community/delete', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      // Force email to lowercase before sending to API
       body: JSON.stringify({ 
         id: deleteId, 
         userEmail: currentUser.email.toLowerCase() 
@@ -78,10 +80,10 @@ const handleDelete = async () => {
     setDeleteId(null);
   }
 };
+
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 500], isMobile ? [0, 0] : [0, 150]);
 
-  // Handle Mobile Responsiveness
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -89,7 +91,6 @@ const handleDelete = async () => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Sync Auth Session
   useEffect(() => {
     const getSession = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -98,7 +99,6 @@ const handleDelete = async () => {
     getSession();
   }, [supabase]);
 
-  // Fetch Community Data
   useEffect(() => {
     async function fetchCircles() {
       try {
@@ -117,7 +117,6 @@ const handleDelete = async () => {
 
   const isExternal = (cat: string) => EXTERNAL_CATEGORIES.includes(cat?.toUpperCase());
 
-  // 🔥 CORE FILTERING LOGIC
   const filteredCircles = useMemo(() => {
     const query = searchQuery.toLowerCase();
     const userEmail = currentUser?.email?.toLowerCase();
@@ -128,19 +127,15 @@ const handleDelete = async () => {
       const isApproved = circle.isApproved === true;
       const isDraft = circle.isDraft === true;
 
-      // 🔒 PRIVACY GATE: If Draft or Unapproved, ONLY owner passes
       if ((isDraft || !isApproved) && !isOwner) return false;
 
-      // Search Filter
       const matchesSearch = 
         circle.title?.toLowerCase().includes(query) || 
         circle.area?.toLowerCase().includes(query) ||
         circle.description?.toLowerCase().includes(query);
       
-      // Category Dropdown Filter
       const matchesCategoryDropdown = activeCategory === "ALL" || circle.category?.toUpperCase() === activeCategory;
       
-      // Tab Filter (Internal vs External)
       let matchesTab = true;
       if (filterTab === "INTERNAL") matchesTab = !isExternal(circle.category);
       if (filterTab === "EXTERNAL") matchesTab = isExternal(circle.category);
@@ -149,7 +144,6 @@ const handleDelete = async () => {
     });
   }, [searchQuery, activeCategory, filterTab, circles, currentUser]);
 
-  // Categories for the filter dropdown
   const dropdownCategories = useMemo(() => {
     const liveCircles = circles.filter(c => c.isApproved && !c.isDraft);
     const cats = liveCircles.map(c => c.category?.toUpperCase() || "TRIBE");
@@ -178,28 +172,30 @@ const handleDelete = async () => {
       </motion.div>
 
       <div className="max-w-7xl mx-auto relative z-10 pt-40 pb-10 px-6">
-        {/* Page Title */}
-        <div className="text-center mb-10">
-          <h1 className="text-4xl md:text-7xl font-black italic uppercase tracking-tighter leading-none">
+        
+        {/* 🔥 FIX: Header left, Add Button right, same row horizontally centered */}
+        <div className="flex flex-row justify-between items-center mb-16 gap-4">
+          
+          <h1 className="text-4xl md:text-7xl font-black italic uppercase tracking-tighter leading-none shrink-0">
             Our <span className="text-brandRed">Circles .</span>
           </h1>
-        </div>
-
-        {/* Listing Bar */}
-        <div className="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center mb-8 gap-6 bg-zinc-950/50 backdrop-blur-xl p-6 rounded-[30px] border border-white/10">
-          <div className="text-left space-y-1">
-            <h3 className="text-lg font-black italic uppercase tracking-tighter text-white">List your <span className="text-brandRed">Organization</span></h3>
-            <p className="text-zinc-500 text-[9px] font-bold uppercase tracking-widest">Add Samajams, Temples, or Local Communities to the grid.</p>
+          
+          <div className="flex flex-row items-center gap-4 bg-zinc-950/50 backdrop-blur-xl px-4 py-2.5 md:px-6 md:py-4 rounded-[20px] border border-white/10 shrink-0">
+            <div className="hidden sm:block text-left">
+              <h3 className="text-xs md:text-sm font-black italic uppercase tracking-widest text-white">List your <span className="text-brandRed">Organization</span></h3>
+              <p className="text-zinc-500 text-[8px] font-bold uppercase tracking-widest mt-0.5">Add Samajams or Temples</p>
+            </div>
+            <Link href="/community/add">
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center justify-center gap-2 bg-white text-black px-4 py-2 md:px-6 md:py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-brandRed hover:text-white transition-all shadow-xl whitespace-nowrap"
+              >
+                <Plus size={14} strokeWidth={3} /> Add Now
+              </motion.button>
+            </Link>
           </div>
-          <Link href="/community/add" className="w-full md:w-auto">
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="w-full md:w-auto flex items-center justify-center gap-3 bg-white text-black px-6 py-3.5 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-brandRed hover:text-white transition-all shadow-xl"
-            >
-              <Plus size={16} strokeWidth={3} /> Add Organization
-            </motion.button>
-          </Link>
+
         </div>
 
         {/* Filter Toolbar */}
@@ -252,12 +248,11 @@ const handleDelete = async () => {
                 </div>
             </div>
         </div>
-                        {/* 🔥 STRATEGIC PLACEMENT: Above the Grid */}
-<TribeDisclaimer type="COMMUNITY" />
+
         {/* Community Grid */}
         <AnimatePresence mode="popLayout">
             {filteredCircles.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
                 {filteredCircles.map((circle) => (
   <motion.div 
     layout 
@@ -267,7 +262,7 @@ const handleDelete = async () => {
     key={circle._id} 
     className="group relative bg-zinc-950/30 border border-white/5 rounded-[35px] overflow-hidden transition-all duration-500 hover:border-brandRed/30 shadow-xl backdrop-blur-2xl"
   >
-    {/* 🔥 OWNER TOOLS: Edit & Delete */}
+    {/* OWNER TOOLS: Edit & Delete */}
 {currentUser?.email?.toLowerCase() === circle.submittedBy?.toLowerCase() && (
   <div className="absolute top-6 right-6 z-[50] flex gap-2">
     <Link href={`/community/add?edit=${circle._id}`}>
@@ -291,7 +286,7 @@ const handleDelete = async () => {
   </div>
 )}
 
-    {/* Status Badges (Shifted left to avoid overlap with owner tools) */}
+    {/* Status Badges */}
     <div className="absolute top-6 left-6 z-[40] flex flex-col gap-2">
       {currentUser?.email?.toLowerCase() === circle.submittedBy?.toLowerCase() && circle.isDraft && (
         <div className="bg-zinc-800/90 backdrop-blur-md text-cyan-400 px-4 py-1.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase tracking-widest border border-white/10 shadow-xl">
@@ -342,7 +337,7 @@ const handleDelete = async () => {
                 ))}
             </div>
             ) : (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-72 flex flex-col items-center justify-center border border-white/5 rounded-[30px] bg-zinc-950/20 mb-20 backdrop-blur-md">
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-72 flex flex-col items-center justify-center border border-white/5 rounded-[30px] bg-zinc-950/20 mb-16 backdrop-blur-md">
                     <Search size={30} className="text-zinc-800 mb-3" />
                     <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[9px]">No nodes detected</p>
                     <button onClick={() => { setSearchQuery(""); setFilterTab("ALL"); setActiveCategory("ALL"); }} className="mt-3 text-brandRed font-black uppercase text-[8px] hover:underline tracking-widest">Clear Filters</button>
@@ -350,8 +345,13 @@ const handleDelete = async () => {
             )}
         </AnimatePresence>
 
-        {/* Footer Metrics - Updated to Glowing Red */}
-        <div className="text-center mt-20 relative">
+        {/* Disclaimer moved to the very bottom */}
+        <div className="mb-10">
+          <TribeDisclaimer type="COMMUNITY" />
+        </div>
+
+        {/* Footer Metrics */}
+        <div className="text-center mt-10 relative">
           <LaserDivider />
           <div className="flex items-center justify-center gap-8 mt-10">
             {[

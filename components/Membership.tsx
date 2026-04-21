@@ -44,14 +44,19 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
         name: "PUNERI MALLUS",
         description: "Lifetime Inner Circle Access",
         order_id: orderData.id,
+        method: {
+    netbanking: true,
+    card: true,
+    upi: true,
+    wallet: true,
+    emi: false,      // Explicitly disabled
+    paylater: false  // Explicitly disabled
+  },
         // 🔥 FORCE UPI FOR THAT WHATSAPP-STYLE UX
         config: {
           display: {
             blocks: {
-              banks: {
-                name: 'Pay via UPI / QR',
-                instruments: [{ method: 'upi' }],
-              },
+              
             },
             sequence: ['block.banks', 'block.cards'],
             preferences: { show_default_blocks: true },
